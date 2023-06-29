@@ -1,0 +1,80 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+concurrency:
+  group: ci-${{github.actor}}-${{github.head_ref || github.run_number}}-${{github.ref}}-windows
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Configure Win64
+      run: cmake . -G "Visual Studio 17 2022" -A x64 -Bbuild_win_64 -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="win-x64-sdk"
+    - name: Build Win64
+      run: cmake --build build_win_64 --target install --config Release
+
+    - name: Configure Win64 ARM64
+      run: cmake . -G "Visual Studio 17 2022" -A ARM64 -Bbuild_win_arm64 -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="win-arm64-sdk"
+    - name: Build Win64
+      run: cmake --build build_win_arm64 --target install --config Release
+
+    - name: Package Windows
+      run: |
+        mkdir bin/win-x64
+        mkdir bin/win-arm64
+        mv win-x64-sdk\bin\*.dll bin/win-x64
+        mv win-arm64-sdk\bin\*.dll bin/win-arm64
+    - uses: actions/upload-artifact@v3
+      with:
+        name: libs_windows
+        path: bin
+
+  combine:
+    name: combine artifacts
+    runs-on: ubuntu-20.04
+    needs: [windows]
+    steps:
+      - name: download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: artifacts
+      - name: combine
+        run: |
+          mkdir native_libs
+          cp -r artifacts/libs_windows/* native_libs
+      - uses: edgarrc/action-7z@v1
+        with:
+          args: 7z a -t7z native_libs.7z ./native_libs/
+      - uses: AButler/upload-release-assets@v2.0
+        if: github.event_name == 'release' && github.event.action == 'created'
+        with:
+          files: native_libs.zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v3
+        with:
+          name: 'Build Artifacts'
+          path: native_libs.7z
+      - uses: geekyeggo/delete-artifact@v2
+        with:
+          name: |
+            libs_windows
