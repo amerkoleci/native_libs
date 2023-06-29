@@ -64,8 +64,8 @@ jobs:
 
     - name: Package Linux
       run: |
-        mkdir bin/linux-x64
-        mv linux-x64-sdk\bin\*.so bin/linux-x64
+        mkdir -p bin/linux-x64
+        mv linux-x64-sdk/lib/*.so bin/linux-x64
     - uses: actions/upload-artifact@v3
       with:
         name: libs_linux
