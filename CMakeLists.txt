@@ -98,6 +98,7 @@ elseif(WIN32)
     set(LIB_PLATFORM_NAME "Win32")
 elseif(UNIX)
     set(LIB_PLATFORM_NAME "Unix")
+    set(UNIX_WSI_SELECTION "XCB" CACHE STRING "Select WSI target (XCB, XLIB, WAYLAND, D2D)")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -184,6 +185,10 @@ else ()
 endif ()
 
 message(STATUS "  Samples         ${LIB_SAMPLES}")
+
+if(UNIX)
+    message(STATUS "      - WSI:         ${UNIX_WSI_SELECTION}")
+endif()
 
 # src
 add_subdirectory(src)
