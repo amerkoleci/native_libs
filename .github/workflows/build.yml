@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   windows:
-    runs-on: windows-2022
+    runs-on: windows-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -57,10 +57,10 @@ jobs:
       run: |
         sudo apt-get -qq update
         sudo apt-get -qq install libzstd-dev ninja-build
-    - name: configure_linux_64
+    - name: Configure linux-x64
       run: cmake . -G Ninja -Bbuild_linux_64 -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="linux-x64-sdk"
-    - name: build_linux_64
-      run: cmake --build build_linux_64 --target install --config Release
+    - name: Build linux-x64
+      run: cmake --build build_linux_64 --target install --verbose --parallel
 
     - name: Package Linux
       run: |
@@ -71,10 +71,37 @@ jobs:
         name: libs_linux
         path: bin
 
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Setup dependencies
+      run: |
+        brew install \
+          ninja \
+          llvm
+
+    - name: Configure osx-universal
+      run: cmake . -G Ninja -Bbuild_osx -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_INSTALL_PREFIX="osx-universal-sdk"
+    - name: Build osx-universal
+      run: cmake --build build_osx --target install --verbose --parallel
+
+    - name: Package macos
+      run: |
+        mkdir -p bin/osx-universal
+        mv osx-universal-sdk/lib/*.dylib bin/osx-universal
+    - uses: actions/upload-artifact@v3
+      with:
+        name: libs_osx
+        path: bin
+
   combine:
     name: combine artifacts
     runs-on: ubuntu-20.04
-    needs: [windows, linux]
+    needs: [windows, linux, macos]
     steps:
       - name: download artifacts
         uses: actions/download-artifact@v3
@@ -88,6 +115,7 @@ jobs:
           mkdir native_libs
           cp -r artifacts/libs_windows/* native_libs
           cp -r artifacts/libs_linux/* native_libs
+          cp -r artifacts/libs_osx/* native_libs
       - uses: edgarrc/action-7z@v1
         with:
           args: 7z a -t7z native_libs.7z ./native_libs/
@@ -105,3 +133,4 @@ jobs:
           name: |
             libs_windows
             libs_linux
+            libs_osx
