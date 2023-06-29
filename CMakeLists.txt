@@ -157,8 +157,6 @@ elseif(ANDROID)
 elseif(UNIX)
     if(APPLE)
 	    set(CMAKE_MACOSX_RPATH ON)
-	    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
-	    set(LOBJC "objc")
     else()
         set(CMAKE_SKIP_RPATH OFF)
     endif()
@@ -186,7 +184,7 @@ endif ()
 
 message(STATUS "  Samples         ${LIB_SAMPLES}")
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
     message(STATUS "      - WSI:         ${UNIX_WSI_SELECTION}")
 endif()
 
