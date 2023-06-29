@@ -15,7 +15,7 @@
 #define STB_VORBIS_HEADER_ONLY
 #include "extras/stb_vorbis.c"    /* Enables Vorbis decoding. */
 
-#define MA_API _ALIMER_AUDIO_EXPORT
+//#define MA_API _ALIMER_AUDIO_EXPORT
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
@@ -39,7 +39,7 @@ bool audio_init(const audio_config* config) {
 
     ma_result result = ma_engine_init(&ma_config, &state.engine);
     if (result != MA_SUCCESS) {
-        return NULL;
+        return false;
     }
 
     state.initialized = true;
