@@ -8,10 +8,13 @@ set(SOURCE_FILES
 
 add_library(${TARGET_NAME} ${SOURCE_FILES})
 target_include_directories(${TARGET_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${TARGET_NAME}>
 )
-target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
+
+if (BUILD_SHARED_LIBS)
+    target_compile_definitions(${TARGET_NAME} PRIVATE SPV_EXPORT_SYMBOLS)
+endif ()
 
 if (LIB_INSTALL)
     install (FILES "spirv_reflect.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${TARGET_NAME})
