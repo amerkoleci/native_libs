@@ -141,27 +141,27 @@ typedef enum ImageDimension {
     IMAGE_DIMENSION_3D = 2,
 } ImageDimension;
 
-typedef struct image_t* image;
+typedef struct ImageImpl* Image;
 
-ALIMER_IMAGE_API image image_create_new(uint32_t width, uint32_t height, ImageFormat format);
-ALIMER_IMAGE_API image image_from_memory(const void* data, size_t size);
-ALIMER_IMAGE_API void image_destroy(image image);
+ALIMER_IMAGE_API Image alimerImageCreateNew(uint32_t width, uint32_t height, ImageFormat format);
+ALIMER_IMAGE_API Image alimerImageCreateFromMemory(const void* data, size_t size);
+ALIMER_IMAGE_API void alimerImageDestroy(Image image);
 
-ALIMER_IMAGE_API ImageDimension image_get_dimension(image image);
-ALIMER_IMAGE_API ImageFormat image_get_format(image image);
-ALIMER_IMAGE_API uint32_t image_get_width(image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t image_get_height(image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t image_get_depth(image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t image_get_layer_count(image image);
-ALIMER_IMAGE_API uint32_t image_get_level_count(image image);
-ALIMER_IMAGE_API bool image_is_array(image image);
-ALIMER_IMAGE_API bool image_is_cubemap(image image);
+ALIMER_IMAGE_API ImageDimension alimerImageGetDimension(Image image);
+ALIMER_IMAGE_API ImageFormat alimerImageGetFormat(Image image);
+ALIMER_IMAGE_API uint32_t alimerImageGetWidth(Image image, uint32_t level);
+ALIMER_IMAGE_API uint32_t alimerImageGetHeight(Image image, uint32_t level);
+ALIMER_IMAGE_API uint32_t alimerImageGetDepth(Image image, uint32_t level);
+ALIMER_IMAGE_API uint32_t alimerImageGetLayerCount(Image image);
+ALIMER_IMAGE_API uint32_t alimerImageGetLevelCount(Image image);
+ALIMER_IMAGE_API bool alimerImageIsArray(Image image);
+ALIMER_IMAGE_API bool alimerImageIsCubemap(Image image);
 
-ALIMER_IMAGE_API uint32_t image_get_data_size(image image);
-ALIMER_IMAGE_API void* image_get_data(image image);
+ALIMER_IMAGE_API uint32_t alimerImageGetDataSize(Image image);
+ALIMER_IMAGE_API void* alimerImageGetData(Image image);
 
 typedef void (*image_save_callback)(uint8_t* pData, uint32_t dataSize);
 
-ALIMER_IMAGE_API bool image_save_png_memory(image image, image_save_callback callback);
+ALIMER_IMAGE_API bool alimerImageSavePngMemory(Image image, image_save_callback callback);
 
 #endif /* _ALIMER_IMAGE_H */

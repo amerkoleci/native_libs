@@ -18,7 +18,7 @@
 #include "stb_image_write.h"
 //#include <ktx.h>
 
-typedef struct image_t {
+typedef struct ImageImpl {
     ImageDimension  dimension;
     uint32_t        width;
     uint32_t        height;
@@ -31,19 +31,19 @@ typedef struct image_t {
 
     uint32_t        dataSize;
     void*           pData;
-} image_t;
+} ImageImpl;
 
-static image dds_load_from_memory(const uint8_t* data, size_t size)
+static Image dds_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 }
 
-static image astc_load_from_memory(const uint8_t* data, size_t size)
+static Image astc_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 }
 
-static image ktx_load_from_memory(const uint8_t* data, size_t size)
+static Image ktx_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 
@@ -104,7 +104,7 @@ static image ktx_load_from_memory(const uint8_t* data, size_t size)
 
 }
 
-static image stb_load_from_memory(const uint8_t* data, size_t size)
+static Image stb_load_from_memory(const uint8_t* data, size_t size)
 {
     int width, height, channels;
     ImageFormat format = ImageFormat_RGBA8Unorm;
@@ -148,7 +148,7 @@ static image stb_load_from_memory(const uint8_t* data, size_t size)
         return NULL;
     }
 
-    image result = image_create_new(width, height, format);
+    Image result = alimerImageCreateNew(width, height, format);
     result->dataSize = memorySize;
     result->pData = malloc(memorySize);
     memcpy(result->pData, image_data, memorySize);
@@ -156,10 +156,10 @@ static image stb_load_from_memory(const uint8_t* data, size_t size)
     return result;
 }
 
-image image_create_new(uint32_t width, uint32_t height, ImageFormat format) {
-    image result = (image_t*)malloc(sizeof(image_t));
+Image alimerImageCreateNew(uint32_t width, uint32_t height, ImageFormat format) {
+    Image result = (ImageImpl*)malloc(sizeof(ImageImpl));
     assert(result);
-    memset(result, 0, sizeof(image_t));
+    memset(result, 0, sizeof(ImageImpl));
 
     result->dimension = IMAGE_DIMENSION_2D;
     result->width = width;
@@ -174,8 +174,8 @@ image image_create_new(uint32_t width, uint32_t height, ImageFormat format) {
     return result;
 }
 
-image image_from_memory(const void* data, size_t size) {
-    image image = NULL;
+Image alimerImageCreateFromMemory(const void* data, size_t size) {
+    Image image = NULL;
 
     if ((image = dds_load_from_memory(data, size)) != NULL) {
         return image;
@@ -196,7 +196,7 @@ image image_from_memory(const void* data, size_t size) {
     return NULL;
 }
 
-void image_destroy(image image) {
+void alimerImageDestroy(Image image) {
     if (!image)
         return;
 
@@ -207,23 +207,23 @@ void image_destroy(image image) {
     free(image);
 }
 
-ImageDimension image_get_dimension(image image) {
+ImageDimension alimerImageGetDimension(Image image) {
     return image->dimension;
 }
 
-ImageFormat image_get_format(image image) {
+ImageFormat alimerImageGetFormat(Image image) {
     return image->format;
 }
 
-uint32_t image_get_width(image image, uint32_t level) {
+uint32_t alimerImageGetWidth(Image image, uint32_t level) {
     return _max(image->width >> level, 1);
 }
 
-uint32_t image_get_height(image image, uint32_t level) {
+uint32_t alimerImageGetHeight(Image image, uint32_t level) {
     return _max(image->height >> level, 1);
 }
 
-uint32_t image_get_depth(image image, uint32_t level) {
+uint32_t alimerImageGetDepth(Image image, uint32_t level) {
     if (image->dimension != IMAGE_DIMENSION_3D) {
         return 1u;
     }
@@ -231,7 +231,7 @@ uint32_t image_get_depth(image image, uint32_t level) {
     return _max(image->depthOrArrayLayers >> level, 1);
 }
 
-uint32_t image_get_layer_count(image image) {
+uint32_t alimerImageGetLayerCount(Image image) {
     if (image->dimension == IMAGE_DIMENSION_3D) {
         return 1u;
     }
@@ -239,27 +239,27 @@ uint32_t image_get_layer_count(image image) {
     return image->depthOrArrayLayers;
 }
 
-uint32_t image_get_level_count(image image) {
+uint32_t alimerImageGetLevelCount(Image image) {
     return image->numLevels;
 }
 
-bool image_is_array(image image) {
+bool alimerImageIsArray(Image image) {
     return image->isArray;
 }
 
-bool image_is_cubemap(image image) {
+bool alimerImageIsCubemap(Image image) {
     return image->isCubemap;
 }
 
-uint32_t image_get_data_size(image image) {
+uint32_t alimerImageGetDataSize(Image image) {
     return image->dataSize;
 }
 
-void* image_get_data(image image) {
+void* alimerImageGetData(Image image) {
     return image->pData;
 }
 
-bool image_save_png_memory(image image, image_save_callback callback) {
+bool alimerImageSavePngMemory(Image image, image_save_callback callback) {
     int len;
     unsigned char* data = stbi_write_png_to_mem(image->pData, image->width * 4, image->width, image->height, 4, &len);
     if (data == NULL)
