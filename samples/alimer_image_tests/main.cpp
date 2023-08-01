@@ -4,6 +4,7 @@
 #include "alimer_image.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <array>
@@ -18,7 +19,6 @@ std::string GetTexturesPath()
 std::vector<uint8_t> LoadTexture(const char* fileName)
 {
     std::ifstream is(GetTexturesPath() + "/" + fileName, std::ios::binary | std::ios::in | std::ios::ate);
-
     
     if (is.is_open())
     {
