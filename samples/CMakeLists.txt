@@ -14,11 +14,6 @@ function(add_sample SAMPLE_NAME)
     else ()
     	add_executable(${SAMPLE_NAME} ${SOURCE_FILES})
     endif ()
-    target_link_libraries(${SAMPLE_NAME} vgpu)
-
-    if (WIN32)
-        set_target_properties(${SAMPLE_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
-    endif ()
 
     if (PLATFORM_UWP)
 	    set_target_properties(${SAMPLE_NAME} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${UWP_MIN_VERSION}")
@@ -39,3 +34,9 @@ function(add_sample SAMPLE_NAME)
     endif()
 endfunction()
 
+function(add_image_sample SAMPLE_NAME)
+    add_sample(${SAMPLE_NAME})
+    target_link_libraries(${SAMPLE_NAME} alimer_image)
+endfunction()
+
+add_image_sample(alimer_image_tests)

@@ -161,7 +161,7 @@ Image alimerImageCreateNew(uint32_t width, uint32_t height, ImageFormat format) 
     assert(result);
     memset(result, 0, sizeof(ImageImpl));
 
-    result->dimension = IMAGE_DIMENSION_2D;
+    result->dimension = ImageDimension_2D;
     result->width = width;
     result->height = height;
     result->depthOrArrayLayers = 1;
@@ -224,7 +224,7 @@ uint32_t alimerImageGetHeight(Image image, uint32_t level) {
 }
 
 uint32_t alimerImageGetDepth(Image image, uint32_t level) {
-    if (image->dimension != IMAGE_DIMENSION_3D) {
+    if (image->dimension != ImageDimension_3D) {
         return 1u;
     }
 
@@ -232,7 +232,7 @@ uint32_t alimerImageGetDepth(Image image, uint32_t level) {
 }
 
 uint32_t alimerImageGetLayerCount(Image image) {
-    if (image->dimension == IMAGE_DIMENSION_3D) {
+    if (image->dimension == ImageDimension_3D) {
         return 1u;
     }
 
