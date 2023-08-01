@@ -57,6 +57,7 @@ jobs:
       run: |
         sudo apt-get -qq update
         sudo apt-get -qq install libzstd-dev ninja-build
+        sudo apt-get -qq install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
     - name: Configure linux-x64
       run: cmake . -G Ninja -Bbuild_linux_64 -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="linux-x64-sdk"
     - name: Build linux-x64

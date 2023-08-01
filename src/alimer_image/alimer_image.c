@@ -133,13 +133,13 @@ static Image stb_load_from_memory(const uint8_t* data, size_t size)
     }
     else if (stbi_is_hdr_from_memory(data, (int)size))
     {
-        image_data = stbi_loadf_from_memory(data, (int)size, &width, &height, NULL, 4);
+        image_data = stbi_loadf_from_memory(data, (int)size, &width, &height, &channels, 4);
         format = ImageFormat_RGBA32Float;
         memorySize = width * height * 4 * sizeof(float);
     }
     else
     {
-        image_data = stbi_load_from_memory(data, (int)size, &width, &height, NULL, 4);
+        image_data = stbi_load_from_memory(data, (int)size, &width, &height, &channels, 4);
         format = ImageFormat_RGBA8Unorm;
         memorySize = width * height * 4 * sizeof(uint8_t);
     }
