@@ -20,17 +20,15 @@
 
 typedef struct ImageImpl {
     ImageDimension  dimension;
+    ImageFormat     format;
     uint32_t        width;
     uint32_t        height;
-    uint32_t        depthOrArrayLayers;
-    ImageFormat     format;
-    uint32_t        numLevels;
-    uint32_t        numFaces;
-    bool            isArray;
+    uint32_t        depthOrArraySize;
+    uint32_t        mipLevels;
     bool            isCubemap;
 
-    uint32_t        dataSize;
-    void*           pData;
+    size_t          dataSize;
+    void* pData;
 } ImageImpl;
 
 static Image dds_load_from_memory(const uint8_t* data, size_t size)
@@ -148,7 +146,7 @@ static Image stb_load_from_memory(const uint8_t* data, size_t size)
         return NULL;
     }
 
-    Image result = alimerImageCreateNew(width, height, format);
+    Image result = alimerImageCreate2D(format, width, height, 1, 1);
     result->dataSize = memorySize;
     result->pData = malloc(memorySize);
     memcpy(result->pData, image_data, memorySize);
@@ -156,22 +154,329 @@ static Image stb_load_from_memory(const uint8_t* data, size_t size)
     return result;
 }
 
-Image alimerImageCreateNew(uint32_t width, uint32_t height, ImageFormat format) {
-    Image result = (ImageImpl*)malloc(sizeof(ImageImpl));
-    assert(result);
-    memset(result, 0, sizeof(ImageImpl));
+bool IsPow2(size_t x)
+{
+    return ((x != 0) && !(x & (x - 1)));
+}
 
-    result->dimension = ImageDimension_2D;
-    result->width = width;
-    result->height = height;
-    result->depthOrArrayLayers = 1;
-    result->numLevels = 1;
-    result->numFaces = 1;
-    result->format = format;
-    result->isArray = false;
-    result->isCubemap = false;
 
-    return result;
+uint32_t CountMips(uint32_t width, uint32_t height)
+{
+    size_t mipLevels = 1;
+
+    while (height > 1 || width > 1)
+    {
+        if (height > 1)
+            height >>= 1;
+
+        if (width > 1)
+            width >>= 1;
+
+        ++mipLevels;
+    }
+
+    return mipLevels;
+}
+
+
+bool CalculateMipLevels(uint32_t width, uint32_t height, uint32_t* mipLevels)
+{
+    if (*mipLevels > 1)
+    {
+        const uint32_t maxMips = CountMips(width, height);
+        if (*mipLevels > maxMips)
+            return false;
+    }
+    else if (*mipLevels == 0)
+    {
+        *mipLevels = CountMips(width, height);
+    }
+    else
+    {
+        *mipLevels = 1;
+    }
+    return true;
+}
+
+uint32_t BitsPerPixel(ImageFormat format)
+{
+    switch (format)
+    {
+        case ImageFormat_RGBA32Uint:
+        case ImageFormat_RGBA32Sint:
+        case ImageFormat_RGBA32Float:
+            return 128;
+
+        case ImageFormat_RG32Uint:
+        case ImageFormat_RG32Sint:
+        case ImageFormat_RG32Float:
+        case ImageFormat_RGBA16Unorm:
+        case ImageFormat_RGBA16Snorm:
+        case ImageFormat_RGBA16Uint:
+        case ImageFormat_RGBA16Sint:
+        case ImageFormat_RGBA16Float:
+            return 64;
+
+        case ImageFormat_R32Uint:
+        case ImageFormat_R32Sint:
+        case ImageFormat_R32Float:
+        case ImageFormat_RG16Unorm:
+        case ImageFormat_RG16Snorm:
+        case ImageFormat_RG16Uint:
+        case ImageFormat_RG16Sint:
+        case ImageFormat_RG16Float:
+        case ImageFormat_RGBA8Unorm:
+        case ImageFormat_RGBA8UnormSrgb:
+        case ImageFormat_RGBA8Snorm:
+        case ImageFormat_RGBA8Uint:
+        case ImageFormat_RGBA8Sint:
+        case ImageFormat_BGRA8Unorm:
+        case ImageFormat_BGRA8UnormSrgb:
+        case ImageFormat_RGB10A2Unorm:
+        case ImageFormat_RGB10A2Uint:
+        case ImageFormat_RG11B10Float:
+        case ImageFormat_RGB9E5Float:
+            return 32;
+
+        case ImageFormat_R16Unorm:
+        case ImageFormat_R16Snorm:
+        case ImageFormat_R16Uint:
+        case ImageFormat_R16Sint:
+        case ImageFormat_R16Float:
+        case ImageFormat_RG8Unorm:
+        case ImageFormat_RG8Snorm:
+        case ImageFormat_RG8Uint:
+        case ImageFormat_RG8Sint:
+            // Packed 16-Bit formats
+        case ImageFormat_BGRA4Unorm:
+        case ImageFormat_B5G6R5Unorm:
+        case ImageFormat_BGR5A1Unorm:
+            return 16;
+
+        case ImageFormat_R8Unorm:
+        case ImageFormat_R8Snorm:
+        case ImageFormat_R8Uint:
+        case ImageFormat_R8Sint:
+        case ImageFormat_BC2RGBAUnorm:
+        case ImageFormat_BC2RGBAUnormSrgb:
+        case ImageFormat_BC3RGBAUnorm:
+        case ImageFormat_BC3RGBAUnormSrgb:
+        case ImageFormat_BC5RGUnorm:
+        case ImageFormat_BC5RGSnorm:
+        case ImageFormat_BC6HRGBUfloat:
+        case ImageFormat_BC6HRGBFloat:
+        case ImageFormat_BC7RGBAUnorm:
+        case ImageFormat_BC7RGBAUnormSrgb:
+            return 8;
+
+        case ImageFormat_BC1RGBAUnorm:
+        case ImageFormat_BC1RGBAUnormSrgb:
+        case ImageFormat_BC4RUnorm:
+        case ImageFormat_BC4RSnorm:
+            return 4;
+
+        default:
+            return 0;
+    }
+}
+
+bool GetSurfaceInfo(ImageFormat format, uint32_t width, uint32_t height, uint32_t* pRowPitch, uint32_t* pSlicePitch, uint32_t* pRowCount)
+{
+    uint32_t rowPitch = 0;
+    uint32_t slicePitch = 0;
+    uint32_t rowCount = 0;
+
+    bool bc = false;
+    bool packed = false;
+    bool planar = false;
+    size_t bpe = 0;
+
+    switch (format)
+    {
+        case ImageFormat_BC1RGBAUnorm:
+        case ImageFormat_BC1RGBAUnormSrgb:
+        case ImageFormat_BC4RUnorm:
+        case ImageFormat_BC4RSnorm:
+            bc = true;
+            bpe = 8;
+            break;
+
+        case ImageFormat_BC2RGBAUnorm:
+        case ImageFormat_BC2RGBAUnormSrgb:
+        case ImageFormat_BC3RGBAUnorm:
+        case ImageFormat_BC3RGBAUnormSrgb:
+        case ImageFormat_BC5RGUnorm:
+        case ImageFormat_BC5RGSnorm:
+        case ImageFormat_BC6HRGBUfloat:
+        case ImageFormat_BC6HRGBFloat:
+        case ImageFormat_BC7RGBAUnorm:
+        case ImageFormat_BC7RGBAUnormSrgb:
+            bc = true;
+            bpe = 16;
+            break;
+
+        default:
+            break;
+    }
+
+    if (bc)
+    {
+        uint32_t numBlocksWide = 0;
+        if (width > 0)
+        {
+            numBlocksWide = _max(1u, (width + 3u) / 4u);
+        }
+        uint32_t numBlocksHigh = 0;
+        if (height > 0)
+        {
+            numBlocksHigh = _max(1u, (height + 3u) / 4u);
+        }
+        rowPitch = numBlocksWide * bpe;
+        slicePitch = rowPitch * numBlocksHigh;
+        rowCount = numBlocksHigh;
+    }
+    else if (packed)
+    {
+        rowPitch = ((width + 1) >> 1) * bpe;
+        rowCount = height;
+        slicePitch = rowPitch * height;
+    }
+    else if (planar)
+    {
+        rowPitch = ((width + 1) >> 1) * bpe;
+        slicePitch = (rowPitch * height) + ((rowPitch * height + 1) >> 1);
+        rowCount = height + ((height + 1u) >> 1);
+    }
+    else
+    {
+        uint32_t bpp = BitsPerPixel(format);
+        rowPitch = (width * bpp + 7) / 8; // round up to nearest byte
+        rowCount = height;
+        slicePitch = rowPitch * height;
+    }
+
+    if (pRowPitch)
+    {
+        *pRowPitch = rowPitch;
+    }
+
+    if (pSlicePitch)
+    {
+        *pSlicePitch = slicePitch;
+    }
+
+    if (pRowCount)
+    {
+        *pRowCount = rowCount;
+    }
+
+    return true;
+}
+
+bool DetermineImageArray(Image image)
+{
+    assert(image->width > 0 && image->height > 0 && image->depthOrArraySize > 0);
+    assert(image->mipLevels > 0);
+
+    size_t totalPixelSize = 0;
+    size_t nimages = 0;
+
+    switch (image->dimension)
+    {
+        case ImageDimension_1D:
+        case ImageDimension_2D:
+            for (uint32_t arrayIndex = 0; arrayIndex < image->depthOrArraySize; ++arrayIndex)
+            {
+                uint32_t w = image->width;
+                uint32_t h = image->height;
+
+                for (uint32_t mipLevel = 0; mipLevel < image->mipLevels; ++mipLevel)
+                {
+                    uint32_t rowPitch, slicePitch;
+                    if (!GetSurfaceInfo(image->format, w, h, &rowPitch, &slicePitch, NULL))
+                    {
+                        return false;
+                    }
+
+                    totalPixelSize += slicePitch;
+                    ++nimages;
+
+                    if (h > 1)
+                        h >>= 1;
+
+                    if (w > 1)
+                        w >>= 1;
+                }
+            }
+            break;
+
+        case ImageDimension_3D:
+        {
+            size_t w = image->width;
+            size_t h = image->height;
+            size_t d = image->depthOrArraySize;
+
+            for (uint32_t mipLevel = 0; mipLevel < image->mipLevels; ++mipLevel)
+            {
+                uint32_t rowPitch, slicePitch;
+                if (!GetSurfaceInfo(image->format, w, h, &rowPitch, &slicePitch, NULL))
+                {
+                    return false;
+                }
+
+                for (size_t slice = 0; slice < d; ++slice)
+                {
+                    totalPixelSize += slicePitch;
+                    ++nimages;
+                }
+
+                if (h > 1)
+                    h >>= 1;
+
+                if (w > 1)
+                    w >>= 1;
+
+                if (d > 1)
+                    d >>= 1;
+            }
+        }
+        break;
+
+        default:
+            return false;
+    }
+
+    //nImages = nimages;
+    image->dataSize = totalPixelSize;
+
+    return true;
+}
+
+Image alimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels) {
+    if (format == ImageFormat_Undefined || !width || !height || !arraySize)
+        return NULL;
+
+    if (!CalculateMipLevels(width, height, &mipLevels))
+        return NULL;
+
+    Image image = (ImageImpl*)malloc(sizeof(ImageImpl));
+    assert(image);
+    memset(image, 0, sizeof(ImageImpl));
+
+    image->dimension = ImageDimension_2D;
+    image->format = format;
+    image->width = width;
+    image->height = height;
+    image->depthOrArraySize = arraySize;
+    image->mipLevels = mipLevels;
+    image->isCubemap = false;
+    if (!DetermineImageArray(image))
+    {
+        free(image);
+        return NULL;
+    }
+
+    return image;
 }
 
 Image alimerImageCreateFromMemory(const void* data, size_t size) {
@@ -228,30 +533,26 @@ uint32_t alimerImageGetDepth(Image image, uint32_t level) {
         return 1u;
     }
 
-    return _max(image->depthOrArrayLayers >> level, 1);
+    return _max(image->depthOrArraySize >> level, 1);
 }
 
-uint32_t alimerImageGetLayerCount(Image image) {
+uint32_t alimerImageGetArraySize(Image image) {
     if (image->dimension == ImageDimension_3D) {
         return 1u;
     }
 
-    return image->depthOrArrayLayers;
+    return image->depthOrArraySize;
 }
 
-uint32_t alimerImageGetLevelCount(Image image) {
-    return image->numLevels;
-}
-
-bool alimerImageIsArray(Image image) {
-    return image->isArray;
+uint32_t alimerImageGetMipLevels(Image image) {
+    return image->mipLevels;
 }
 
 bool alimerImageIsCubemap(Image image) {
     return image->isCubemap;
 }
 
-uint32_t alimerImageGetDataSize(Image image) {
+size_t alimerImageGetDataSize(Image image) {
     return image->dataSize;
 }
 

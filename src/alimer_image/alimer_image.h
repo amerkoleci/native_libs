@@ -75,8 +75,8 @@ typedef enum ImageFormat {
     // Packed 32-Bit Pixel Formats
     ImageFormat_RGB10A2Unorm,
     ImageFormat_RGB10A2Uint,
-    ImageFormat_RG11B10Ufloat,
-    ImageFormat_RGB9E5Ufloat,
+    ImageFormat_RG11B10Float,
+    ImageFormat_RGB9E5Float,
     // 64-bit formats
     ImageFormat_RG32Uint,
     ImageFormat_RG32Sint,
@@ -163,7 +163,7 @@ typedef enum ImageDimension {
 
 typedef struct ImageImpl* Image;
 
-ALIMER_IMAGE_API Image alimerImageCreateNew(uint32_t width, uint32_t height, ImageFormat format);
+ALIMER_IMAGE_API Image alimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels);
 ALIMER_IMAGE_API Image alimerImageCreateFromMemory(const void* data, size_t size);
 ALIMER_IMAGE_API void alimerImageDestroy(Image image);
 
@@ -172,12 +172,11 @@ ALIMER_IMAGE_API ImageFormat alimerImageGetFormat(Image image);
 ALIMER_IMAGE_API uint32_t alimerImageGetWidth(Image image, uint32_t level);
 ALIMER_IMAGE_API uint32_t alimerImageGetHeight(Image image, uint32_t level);
 ALIMER_IMAGE_API uint32_t alimerImageGetDepth(Image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t alimerImageGetLayerCount(Image image);
-ALIMER_IMAGE_API uint32_t alimerImageGetLevelCount(Image image);
-ALIMER_IMAGE_API bool alimerImageIsArray(Image image);
+ALIMER_IMAGE_API uint32_t alimerImageGetArraySize(Image image);
+ALIMER_IMAGE_API uint32_t alimerImageGetMipLevels(Image image);
 ALIMER_IMAGE_API bool alimerImageIsCubemap(Image image);
 
-ALIMER_IMAGE_API uint32_t alimerImageGetDataSize(Image image);
+ALIMER_IMAGE_API size_t alimerImageGetDataSize(Image image);
 ALIMER_IMAGE_API void* alimerImageGetData(Image image);
 
 typedef void (*image_save_callback)(uint8_t* pData, uint32_t dataSize);
