@@ -7,6 +7,12 @@ add_subdirectory(alimer_image)
 # audio library
 add_subdirectory(alimer_audio)
 
+# cimgui
+add_subdirectory(cimgui)
+
+# cimnodes
+add_subdirectory(cimnodes)
+
 # spirv-reflect
 add_subdirectory(spirv-reflect)
 
