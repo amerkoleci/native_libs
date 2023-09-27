@@ -47,25 +47,25 @@ std::vector<uint8_t> LoadTexture(const char* fileName)
 void TestPng()
 {
     std::vector<uint8_t> fileData = LoadTexture("10points.png");
-    Image image = alimerImageCreateFromMemory(fileData.data(), fileData.size());
-    ImageDimension dimension = alimerImageGetDimension(image);
-    ImageFormat format = alimerImageGetFormat(image);
+    AlimerImage* image = AlimerImageCreateFromMemory(fileData.data(), fileData.size());
+    ImageDimension dimension = AlimerImageGetDimension(image);
+    ImageFormat format = AlimerImageGetFormat(image);
 
     assert(dimension == ImageDimension_2D);
     assert(format == ImageFormat_RGBA8Unorm);
-    alimerImageDestroy(image);
+    AlimerImageDestroy(image);
 }
 
 void TestHdr()
 {
     std::vector<uint8_t> fileData = LoadTexture("environment.hdr");
-    Image image = alimerImageCreateFromMemory(fileData.data(), fileData.size());
-    ImageDimension dimension = alimerImageGetDimension(image);
-    ImageFormat format = alimerImageGetFormat(image);
+    AlimerImage* image = AlimerImageCreateFromMemory(fileData.data(), fileData.size());
+    ImageDimension dimension = AlimerImageGetDimension(image);
+    ImageFormat format = AlimerImageGetFormat(image);
 
     assert(dimension == ImageDimension_2D);
     assert(format == ImageFormat_RGBA32Float);
-    alimerImageDestroy(image);
+    AlimerImageDestroy(image);
 }
 
 int main()

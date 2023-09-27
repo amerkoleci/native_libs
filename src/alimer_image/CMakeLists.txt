@@ -4,8 +4,6 @@ set (TARGET_NAME alimer_image)
 set(SOURCE_FILES
     alimer_image.h
     alimer_image.c
-    stb_image.h
-    stb_image_write.h
 )
 
 add_library(${TARGET_NAME} SHARED ${SOURCE_FILES})

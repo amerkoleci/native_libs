@@ -13,10 +13,11 @@
 #define STBI_NO_STDIO
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
+#include "third_party/stb_image.h"
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STBI_WRITE_NO_STDIO
-#include "stb_image.h"
-#include "stb_image_write.h"
+#include "third_party/stb_image_write.h"
 //#include <ktx.h>
 
 typedef struct AlimerImage {
