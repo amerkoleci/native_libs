@@ -2,6 +2,7 @@
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 #include "alimer_image.h"
+#include <stdbool.h>
 #include <stdlib.h> // malloc, free
 #include <string.h> // memset
 #include <assert.h>
@@ -18,30 +19,30 @@
 #include "stb_image_write.h"
 //#include <ktx.h>
 
-typedef struct ImageImpl {
+typedef struct AlimerImage {
     ImageDimension  dimension;
     ImageFormat     format;
     uint32_t        width;
     uint32_t        height;
     uint32_t        depthOrArraySize;
     uint32_t        mipLevels;
-    bool            isCubemap;
+    Bool32          isCubemap;
 
     size_t          dataSize;
-    void* pData;
-} ImageImpl;
+    void*           pData;
+} AlimerImage;
 
-static Image dds_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage* dds_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 }
 
-static Image astc_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage* astc_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 }
 
-static Image ktx_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage* ktx_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 
@@ -102,7 +103,7 @@ static Image ktx_load_from_memory(const uint8_t* data, size_t size)
 
 }
 
-static Image stb_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage* stb_load_from_memory(const uint8_t* data, size_t size)
 {
     int width, height, channels;
     ImageFormat format = ImageFormat_RGBA8Unorm;
@@ -146,7 +147,7 @@ static Image stb_load_from_memory(const uint8_t* data, size_t size)
         return NULL;
     }
 
-    Image result = alimerImageCreate2D(format, width, height, 1, 1);
+    AlimerImage* result = AlimerImageCreate2D(format, width, height, 1, 1);
     result->dataSize = memorySize;
     result->pData = malloc(memorySize);
     memcpy(result->pData, image_data, memorySize);
@@ -373,7 +374,7 @@ bool GetSurfaceInfo(ImageFormat format, uint32_t width, uint32_t height, uint32_
     return true;
 }
 
-bool DetermineImageArray(Image image)
+bool DetermineImageArray(AlimerImage* image)
 {
     assert(image->width > 0 && image->height > 0 && image->depthOrArraySize > 0);
     assert(image->mipLevels > 0);
@@ -452,16 +453,17 @@ bool DetermineImageArray(Image image)
     return true;
 }
 
-Image alimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels) {
+AlimerImage* AlimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels)
+{
     if (format == ImageFormat_Undefined || !width || !height || !arraySize)
         return NULL;
 
     if (!CalculateMipLevels(width, height, &mipLevels))
         return NULL;
 
-    Image image = (ImageImpl*)malloc(sizeof(ImageImpl));
+    AlimerImage* image = (AlimerImage*)malloc(sizeof(AlimerImage));
     assert(image);
-    memset(image, 0, sizeof(ImageImpl));
+    memset(image, 0, sizeof(AlimerImage));
 
     image->dimension = ImageDimension_2D;
     image->format = format;
@@ -479,8 +481,9 @@ Image alimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, u
     return image;
 }
 
-Image alimerImageCreateFromMemory(const void* data, size_t size) {
-    Image image = NULL;
+AlimerImage* AlimerImageCreateFromMemory(const void* data, size_t size)
+{
+    AlimerImage* image = NULL;
 
     if ((image = dds_load_from_memory(data, size)) != NULL) {
         return image;
@@ -501,7 +504,8 @@ Image alimerImageCreateFromMemory(const void* data, size_t size) {
     return NULL;
 }
 
-void alimerImageDestroy(Image image) {
+void AlimerImageDestroy(AlimerImage* image)
+{
     if (!image)
         return;
 
@@ -512,23 +516,28 @@ void alimerImageDestroy(Image image) {
     free(image);
 }
 
-ImageDimension alimerImageGetDimension(Image image) {
+ImageDimension AlimerImageGetDimension(AlimerImage* image)
+{
     return image->dimension;
 }
 
-ImageFormat alimerImageGetFormat(Image image) {
+ImageFormat AlimerImageGetFormat(AlimerImage* image)
+{
     return image->format;
 }
 
-uint32_t alimerImageGetWidth(Image image, uint32_t level) {
+uint32_t AlimerImageGetWidth(AlimerImage* image, uint32_t level)
+{
     return _max(image->width >> level, 1);
 }
 
-uint32_t alimerImageGetHeight(Image image, uint32_t level) {
+uint32_t AlimerImageGetHeight(AlimerImage* image, uint32_t level)
+{
     return _max(image->height >> level, 1);
 }
 
-uint32_t alimerImageGetDepth(Image image, uint32_t level) {
+uint32_t AlimerImageGetDepth(AlimerImage* image, uint32_t level)
+{
     if (image->dimension != ImageDimension_3D) {
         return 1u;
     }
@@ -536,7 +545,8 @@ uint32_t alimerImageGetDepth(Image image, uint32_t level) {
     return _max(image->depthOrArraySize >> level, 1);
 }
 
-uint32_t alimerImageGetArraySize(Image image) {
+uint32_t AlimerImageGetArraySize(AlimerImage* image)
+{
     if (image->dimension == ImageDimension_3D) {
         return 1u;
     }
@@ -544,25 +554,26 @@ uint32_t alimerImageGetArraySize(Image image) {
     return image->depthOrArraySize;
 }
 
-uint32_t alimerImageGetMipLevels(Image image) {
+uint32_t AlimerImageGetMipLevels(AlimerImage* image)
+{
     return image->mipLevels;
 }
 
-bool alimerImageIsCubemap(Image image) {
+Bool32 AlimerImageIsCubemap(AlimerImage* image)
+{
     return image->isCubemap;
 }
 
-size_t alimerImageGetDataSize(Image image) {
-    return image->dataSize;
-}
-
-void* alimerImageGetData(Image image) {
+void* AlimerImageGetData(AlimerImage* image, size_t* size)
+{
+    *size = image->dataSize;
     return image->pData;
 }
 
-bool alimerImageSavePngMemory(Image image, image_save_callback callback) {
+Bool32 AlimerImageSavePngMemory(AlimerImage* image, AlimerImageSaveCallback callback)
+{
     int len;
-    unsigned char* data = stbi_write_png_to_mem(image->pData, image->width * 4, image->width, image->height, 4, &len);
+    uint8_t* data = stbi_write_png_to_mem(image->pData, image->width * 4, image->width, image->height, 4, &len);
     if (data == NULL)
         return false;
 

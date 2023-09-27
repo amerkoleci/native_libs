@@ -8,11 +8,7 @@ set(SOURCE_FILES
     stb_image_write.h
 )
 
-add_library(${TARGET_NAME} ${SOURCE_FILES})
-target_compile_definitions (${TARGET_NAME} PRIVATE ALIMER_IMAGE_IMPLEMENTATION=1)
-if (BUILD_SHARED_LIBS)
-    target_compile_definitions (${TARGET_NAME} PRIVATE ALIMER_IMAGE_SHARED_LIBRARY=1)
-endif ()
+add_library(${TARGET_NAME} SHARED ${SOURCE_FILES})
 
 # Include directories
 target_include_directories(${TARGET_NAME} PUBLIC

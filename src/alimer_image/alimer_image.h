@@ -4,35 +4,25 @@
 #ifndef _ALIMER_IMAGE_H
 #define _ALIMER_IMAGE_H
 
-#if defined(ALIMER_IMAGE_SHARED_LIBRARY)
-#    if defined(_WIN32)
-#        if defined(ALIMER_IMAGE_IMPLEMENTATION)
-#            define _ALIMER_IMAGE_EXPORT __declspec(dllexport)
-#        else
-#            define _ALIMER_IMAGE_EXPORT __declspec(dllimport)
-#        endif
-#    else
-#        if defined(ALIMER_IMAGE_IMPLEMENTATION)
-#            define _ALIMER_IMAGE_EXPORT __attribute__((visibility("default")))
-#        else
-#            define _ALIMER_IMAGE_EXPORT
-#        endif
-#    endif
+#if defined(_WIN32)|| defined(__CYGWIN__)
+#   define ALIMER_EXPORT_API __declspec(dllexport)
+#   define ALIMER_CALL __cdecl
+#elif __GNUC__
+#   define ALIMER_EXPORT_API __attribute__((__visibility__("default")))
+#   define ALIMER_CALL
 #else
-#    define _ALIMER_IMAGE_EXPORT
+#   define ALIMER_EXPORT_API
+#   define ALIMER_CALL
 #endif
 
 #ifdef __cplusplus
-#    define _ALIMER_IMAGE_EXTERN extern "C"
+#   define ALIMER_API extern "C" ALIMER_EXPORT_API 
 #else
-#    define _ALIMER_IMAGE_EXTERN extern
+#   define ALIMER_API extern ALIMER_EXPORT_API 
 #endif
 
-#define ALIMER_IMAGE_API _ALIMER_IMAGE_EXTERN _ALIMER_IMAGE_EXPORT 
-
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+typedef uint32_t Bool32;
 
 /* Similar to WebGPU Format (WGPUTextureFormat) with some additions */
 typedef enum ImageFormat {
@@ -161,26 +151,25 @@ typedef enum ImageDimension {
     ImageDimension_Force32 = 0x7FFFFFFF
 } ImageDimension;
 
-typedef struct ImageImpl* Image;
+typedef struct AlimerImage AlimerImage;
 
-ALIMER_IMAGE_API Image alimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels);
-ALIMER_IMAGE_API Image alimerImageCreateFromMemory(const void* data, size_t size);
-ALIMER_IMAGE_API void alimerImageDestroy(Image image);
+ALIMER_API AlimerImage* AlimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels);
+ALIMER_API AlimerImage* AlimerImageCreateFromMemory(const void* data, size_t size);
+ALIMER_API void AlimerImageDestroy(AlimerImage* image);
 
-ALIMER_IMAGE_API ImageDimension alimerImageGetDimension(Image image);
-ALIMER_IMAGE_API ImageFormat alimerImageGetFormat(Image image);
-ALIMER_IMAGE_API uint32_t alimerImageGetWidth(Image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t alimerImageGetHeight(Image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t alimerImageGetDepth(Image image, uint32_t level);
-ALIMER_IMAGE_API uint32_t alimerImageGetArraySize(Image image);
-ALIMER_IMAGE_API uint32_t alimerImageGetMipLevels(Image image);
-ALIMER_IMAGE_API bool alimerImageIsCubemap(Image image);
+ALIMER_API ImageDimension AlimerImageGetDimension(AlimerImage* image);
+ALIMER_API ImageFormat AlimerImageGetFormat(AlimerImage* image);
+ALIMER_API uint32_t AlimerImageGetWidth(AlimerImage* image, uint32_t level);
+ALIMER_API uint32_t AlimerImageGetHeight(AlimerImage* image, uint32_t level);
+ALIMER_API uint32_t AlimerImageGetDepth(AlimerImage* image, uint32_t level);
+ALIMER_API uint32_t AlimerImageGetArraySize(AlimerImage* image);
+ALIMER_API uint32_t AlimerImageGetMipLevels(AlimerImage* image);
+ALIMER_API Bool32 AlimerImageIsCubemap(AlimerImage* image);
 
-ALIMER_IMAGE_API size_t alimerImageGetDataSize(Image image);
-ALIMER_IMAGE_API void* alimerImageGetData(Image image);
+ALIMER_API void* AlimerImageGetData(AlimerImage* image, size_t* size);
 
-typedef void (*image_save_callback)(uint8_t* pData, uint32_t dataSize);
+typedef void (ALIMER_CALL* AlimerImageSaveCallback)(uint8_t* pData, uint32_t dataSize);
 
-ALIMER_IMAGE_API bool alimerImageSavePngMemory(Image image, image_save_callback callback);
+ALIMER_API Bool32 AlimerImageSavePngMemory(AlimerImage* image, AlimerImageSaveCallback callback);
 
 #endif /* _ALIMER_IMAGE_H */

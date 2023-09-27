@@ -21,9 +21,10 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        submodules: true
+      uses: actions/checkout@v4
+
+    - name: Get CMake
+      uses: lukka/get-cmake@v3.27.4      
 
     - name: Configure Win64
       run: cmake . -G "Visual Studio 17 2022" -A x64 -Bbuild_win_64 -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="win-x64-sdk"
@@ -47,11 +48,12 @@ jobs:
         path: bin
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
+    - uses: actions/checkout@v4
+
+    - name: Get CMake
+      uses: lukka/get-cmake@v3.27.4     
 
     - name: Install dependencies
       run: |
@@ -61,7 +63,7 @@ jobs:
     - name: Configure linux-x64
       run: cmake . -G Ninja -Bbuild_linux_64 -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="linux-x64-sdk"
     - name: Build linux-x64
-      run: cmake --build build_linux_64 --target install --verbose --parallel
+      run: cmake --build build_linux_64 --config Release --target install --verbose --parallel
 
     - name: Package Linux
       run: |
@@ -75,20 +77,15 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
+    - uses: actions/checkout@v4
 
-    - name: Setup dependencies
-      run: |
-        brew install \
-          ninja \
-          llvm
+    - name: Get CMake
+      uses: lukka/get-cmake@v3.27.4
 
-    - name: Configure osx-universal
-      run: cmake . -G Ninja -Bbuild_osx -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="osx-universal-sdk"
-    - name: Build osx-universal
-      run: cmake --build build_osx --target install --verbose --parallel
+    - name: CMake Configure osx-universal
+      run: cmake . -B build_osx -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="osx-universal-sdk"
+    - name: CMake Build osx-universal
+      run: cmake --build build_osx --config Release --target install
 
     - name: Package macos
       run: |
