@@ -21,6 +21,7 @@
 #   define ALIMER_API extern ALIMER_EXPORT_API 
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 typedef uint32_t Bool32;
 

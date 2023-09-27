@@ -1,3 +1,5 @@
+include(FetchContent)
+
 # Third party
 add_subdirectory(third_party)
 
@@ -22,17 +24,21 @@ add_subdirectory(spirv-cross)
 # vma
 add_subdirectory(vma)
 
-# GLFW
-if(NOT (ANDROID OR EMSCRIPTEN OR WINDOWS_STORE))
-    set(GLFW_BUILD_DOCS OFF CACHE BOOL "")
-    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "")
-    set(GLFW_BUILD_TESTS OFF CACHE BOOL "")
-    set(GLFW_INSTALL OFF CACHE BOOL "")
-    #set(BUILD_SHARED_LIBS ON CACHE BOOL "")
+# SDL3
+set(SDL_TEST_ENABLED_BY_DEFAULT OFF)
+set(SDL_SHARED_ENABLED_BY_DEFAULT ON)
+set(SDL_STATIC_ENABLED_BY_DEFAULT OFF)
 
-    if (VGPU_WSI_SELECTION STREQUAL WAYLAND)
-        set(GLFW_USE_WAYLAND ON CACHE BOOL "")
-    endif()
+FetchContent_Declare(
+    SDL3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL
+    GIT_TAG 9667aa18e6c29885d8cd45efc2cf8bcb97270d7d
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(SDL3)
 
-    add_subdirectory(glfw)
-endif()
+install(TARGETS SDL3-shared
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
