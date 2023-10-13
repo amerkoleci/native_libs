@@ -19,7 +19,7 @@ int main()
     int sdl_init_flags = SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD;
     if (SDL_Init(sdl_init_flags) != 0)
     {
-        return;
+        return 1;
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

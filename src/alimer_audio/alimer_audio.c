@@ -1,7 +1,8 @@
-// Copyright © Amer Koleci.
+// Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 #include "alimer_audio.h"
+#include <stdbool.h>
 #include <stdlib.h> // malloc, free
 #include <string.h> // memset
 
@@ -17,18 +18,20 @@
 
 //#define MA_API _ALIMER_AUDIO_EXPORT
 #define MINIAUDIO_IMPLEMENTATION
+#define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
+#define MA_ENABLE_WASAPI
+#define MA_ENABLE_ALSA
+#define MA_ENABLE_COREAUDIO
+#define MA_ENABLE_OPENSL
+#define MA_ENABLE_WEBAUDIO
 #include "miniaudio.h"
-
-/* stb_vorbis implementation must come after the implementation of miniaudio. */
-#undef STB_VORBIS_HEADER_ONLY
-#include "extras/stb_vorbis.c"
 
 static struct {
     bool initialized;
     ma_engine engine;
 } state;
 
-bool audio_init(const audio_config* config) {
+Bool32 Alimer_AudioInit(const AudioConfig* config) {
     if (state.initialized)
         return false;
 
@@ -46,43 +49,111 @@ bool audio_init(const audio_config* config) {
     return true;
 }
 
-void audio_shutdown(void) {
+void Alimer_AudioShutdown(void) {
     if (!state.initialized)
         return;
 
     ma_engine_uninit(&state.engine);
 }
 
-uint32_t audio_get_channels(void) {
-    return ma_engine_get_channels(&state.engine);
-}
-
-uint32_t audio_get_sample_rate(void) {
-    return ma_engine_get_sample_rate(&state.engine);
-}
-
-bool audio_start(void) {
+Bool32 Alimer_AudioStart(void) {
     return ma_engine_start(&state.engine) == MA_SUCCESS;
 }
 
-bool audio_stop(void) {
+Bool32 Alimer_AudioStop(void) {
     return ma_engine_stop(&state.engine) == MA_SUCCESS;
 }
 
-float audio_get_volume(void) {
+uint32_t Alimer_AudioGetOutputChannels(void) {
+    return ma_engine_get_channels(&state.engine);
+}
+
+uint32_t Alimer_AudioGetOutputSampleRate(void) {
+    return ma_engine_get_sample_rate(&state.engine);
+}
+
+float Alimer_AudioGetMasterVolume(void) {
     if (!state.initialized) {
         return 0.0f;
     }
 
-    return ma_node_get_output_bus_volume(ma_node_graph_get_endpoint(&state.engine.nodeGraph), 0);
+    return ma_engine_get_volume(&state.engine);
 }
 
-bool audio_set_volume(float volume) {
+Bool32 Alimer_AudioSetMasterVolume(float volume) {
     return ma_engine_set_volume(&state.engine, volume) == MA_SUCCESS;
 }
 
+AlimerSound* Alimer_SoundCreate(const char* path, uint32_t flags)
+{
+    ma_sound* sound = malloc(sizeof(ma_sound));
 
-/* WIP */
-bool audio_play_sound(const char* file_name) {
-    return ma_engine_play_sound(&state.engine, file_name, NULL) == MA_SUCCESS;
+    if (MA_SUCCESS != ma_sound_init_from_file(&state.engine, path, flags, NULL, NULL, sound))
+    {
+        //Alimer_LogError("Unable to create Sound from file");
+        free(sound);
+        return NULL;
+    }
+
+    return (AlimerSound*)sound;
 }
+
+void Alimer_SoundDestroy(AlimerSound* sound)
+{
+    ma_sound_uninit((ma_sound*)sound);
+    free((ma_sound*)sound);
+}
+
+void Alimer_SoundPlay(AlimerSound* sound)
+{
+    ma_sound_start((ma_sound*)sound);
+}
+
+void Alimer_SoundStop(AlimerSound* sound)
+{
+    ma_sound_stop((ma_sound*)sound);
+}
+
+float Alimer_SoundGetVolume(AlimerSound* sound)
+{
+    return ma_sound_get_volume((ma_sound*)sound);
+}
+
+void Alimer_SoundSetVolume(AlimerSound* sound, float value)
+{
+    ma_sound_set_volume((ma_sound*)sound, value);
+}
+
+float Alimer_SoundGetPitch(AlimerSound* sound)
+{
+    return ma_sound_get_pitch((ma_sound*)sound);
+}
+
+void Alimer_SoundSetPitch(AlimerSound* sound, float value)
+{
+    ma_sound_set_pitch((ma_sound*)sound, value);
+}
+
+Bool32 Alimer_SoundIsPlaying(AlimerSound* sound)
+{
+    return ma_sound_is_playing((ma_sound*)sound);
+}
+
+Bool32 Alimer_SoundIsLooping(AlimerSound* sound)
+{
+    return ma_sound_is_looping((ma_sound*)sound);
+}
+
+void Alimer_SoundSetLooping(AlimerSound* sound, Bool32 value)
+{
+    ma_sound_set_looping((ma_sound*)sound, value);
+}
+
+Bool32 Alimer_SoundGetFinished(AlimerSound* sound)
+{
+    return ma_sound_at_end((ma_sound*)sound);
+}
+
+/* stb_vorbis implementation must come after the implementation of miniaudio. */
+#undef STB_VORBIS_HEADER_ONLY
+#include "extras/stb_vorbis.c"

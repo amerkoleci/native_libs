@@ -13,6 +13,16 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
 
+if (MSVC)
+    # Set warning level 3
+    target_compile_options(${TARGET_NAME} PRIVATE /W3)
+
+    # Warnings as Errors Enabled
+    target_compile_options(${TARGET_NAME} PRIVATE /WX)
+else()
+    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra Wunused-variable -pedantic)
+endif ()
+
 if (LIB_INSTALL)
     install (FILES "include/vk_mem_alloc.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${TARGET_NAME})
 

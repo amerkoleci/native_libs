@@ -1,4 +1,4 @@
-// Copyright © Amer Koleci.
+// Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 #include "alimer_image.h"
@@ -20,7 +20,7 @@
 #include "third_party/stb_image_write.h"
 //#include <ktx.h>
 
-typedef struct AlimerImage {
+struct AlimerImage {
     ImageDimension  dimension;
     ImageFormat     format;
     uint32_t        width;
@@ -31,7 +31,7 @@ typedef struct AlimerImage {
 
     size_t          dataSize;
     void*           pData;
-} AlimerImage;
+};
 
 static AlimerImage* dds_load_from_memory(const uint8_t* data, size_t size)
 {

@@ -25,14 +25,15 @@ add_subdirectory(spirv-cross)
 add_subdirectory(vma)
 
 # SDL3
-set(SDL_TEST_ENABLED_BY_DEFAULT OFF)
-set(SDL_SHARED_ENABLED_BY_DEFAULT ON)
-set(SDL_STATIC_ENABLED_BY_DEFAULT OFF)
+set(SDL_SHARED ON CACHE BOOL "Don't build SDL as shared library")
+set(SDL_STATIC OFF CACHE BOOL "Build a SDL static library")
+set(SDL_TESTS OFF CACHE BOOL "Disable SDL tests")
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "Disable SDL test library")
 
 FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL
-    GIT_TAG 9667aa18e6c29885d8cd45efc2cf8bcb97270d7d
+    GIT_TAG 72034b9a07776e26cc2c83f519549c457c3452f7
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(SDL3)
