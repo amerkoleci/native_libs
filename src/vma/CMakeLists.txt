@@ -20,7 +20,7 @@ if (MSVC)
     # Warnings as Errors Enabled
     target_compile_options(${TARGET_NAME} PRIVATE /WX)
 else()
-    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra Wunused-variable -pedantic)
+    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -pedantic)
 endif ()
 
 if (LIB_INSTALL)
