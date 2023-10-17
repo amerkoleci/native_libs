@@ -44,7 +44,7 @@ AlimerFont Alimer_FontCreateFromMemory(const uint8_t* data, size_t size)
     return  font;
 }
 
-void Alimer_FontDestroy(AlimerFont* font)
+void Alimer_FontDestroy(AlimerFont font)
 {
     ALIMER_FREE(font);
 }
