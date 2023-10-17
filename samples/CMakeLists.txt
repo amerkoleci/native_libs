@@ -39,10 +39,4 @@ function(add_image_sample SAMPLE_NAME)
     target_link_libraries(${SAMPLE_NAME} alimer_image)
 endfunction()
 
-function(add_sdl_sample SAMPLE_NAME)
-    add_sample(${SAMPLE_NAME})
-    target_link_libraries(${SAMPLE_NAME} PUBLIC SDL3::SDL3)
-endfunction()
-
 add_image_sample(alimer_image_tests)
-add_sdl_sample(sdl_tests)
