@@ -52,7 +52,7 @@ void TestPng()
     PixelFormat format = Alimer_ImageGetFormat(image);
 
     assert(dimension == ImageDimension_2D);
-    assert(format == PixelFormat_RGBA8UnormSrgb);
+    assert(format == PixelFormat_RGBA8Unorm);
     Alimer_ImageDestroy(image);
 }
 

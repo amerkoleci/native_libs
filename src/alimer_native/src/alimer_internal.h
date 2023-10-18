@@ -51,6 +51,8 @@
 #define ALIMER_ENABLE_WARNINGS() __pragma(warning(pop))
 #endif
 
+#define ALIMER_STRINGIZE_HELPER(X) #X
+#define ALIMER_STRINGIZE(X) ALIMER_STRINGIZE_HELPER(X)
 #define ALIMER_UNUSED(x) (void)(x)
 
 // Macro for determining size of arrays.

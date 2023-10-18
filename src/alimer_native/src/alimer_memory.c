@@ -45,7 +45,7 @@ void Alimer_clear(void* ptr, size_t size)
     memset(ptr, 0, size);
 }
 
-void Alimer_GetVersion(uint32_t* major, uint32_t* minor, uint32_t* patch)
+void Alimer_GetVersion(int* major, int* minor, int* patch)
 {
     if (major) *major = ALIMER_VERSION_MAJOR;
     if (minor) *minor = ALIMER_VERSION_MINOR;
