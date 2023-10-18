@@ -66,8 +66,6 @@
 #   define ALIMER_ASSERT(c) assert(c)
 #endif
 
-#define _def(val, def) (((val) == 0) ? (def) : (val))
-#define _def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
 #define ALIMER_MIN(a, b) (a < b ? a : b)
 #define ALIMER_MAX(a, b) (a > b ? a : b)
 #define ALIMER_CLAMP(val, min, max) ALIMER_MAX(min, ALIMER_MIN(val, max))

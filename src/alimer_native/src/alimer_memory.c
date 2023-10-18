@@ -44,3 +44,23 @@ void Alimer_clear(void* ptr, size_t size)
     ALIMER_ASSERT(ptr && (size > 0));
     memset(ptr, 0, size);
 }
+
+void Alimer_GetVersion(uint32_t* major, uint32_t* minor, uint32_t* patch)
+{
+    if (major) *major = ALIMER_VERSION_MAJOR;
+    if (minor) *minor = ALIMER_VERSION_MINOR;
+    if (patch) *patch = ALIMER_VERSION_PATCH;
+}
+
+void Alimer_SetAllocationCallbacks(const MemoryAllocationCallbacks* callback, void* userData)
+{
+    if (callback == NULL)
+    {
+        MEMORY_ALLOC_CB = &DEFAULT_MEMORY_ALLOC_CB;
+    }
+    else {
+        MEMORY_ALLOC_CB = callback;
+    }
+
+    s_memoryUserData = userData;
+}

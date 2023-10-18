@@ -3,8 +3,6 @@ include(FetchContent)
 # Third party
 add_subdirectory(third_party)
 
-add_subdirectory(alimer_image)
-
 # Alimer native library
 add_subdirectory(alimer_native)
 

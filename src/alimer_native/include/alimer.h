@@ -39,9 +39,17 @@
 typedef uint32_t Flags;
 typedef uint32_t Bool32;
 
+/* Defines */
+#define ALIMER_VERSION_MAJOR	1
+#define ALIMER_VERSION_MINOR	0
+#define ALIMER_VERSION_PATCH	0
+
 /* Types */
+typedef struct AlimerImageImpl* AlimerImage;
 typedef struct AlimerSoundImpl* AlimerSound;
 typedef struct AlimerFontImpl* AlimerFont;
+
+ALIMER_API void Alimer_GetVersion(uint32_t* major, uint32_t* minor, uint32_t* patch);
 
 /* Memory */
 typedef struct MemoryAllocationCallbacks {
@@ -51,15 +59,162 @@ typedef struct MemoryAllocationCallbacks {
 
 ALIMER_API void Alimer_SetAllocationCallbacks(const MemoryAllocationCallbacks* callback, void* userData);
 
-/* Audio */
+/* Image */
+/* Similar to WebGPU Format (WGPUTextureFormat) with some additions */
+typedef enum PixelFormat {
+    PixelFormat_Undefined = 0,
 
+    // 8-bit formats
+    PixelFormat_R8Unorm,
+    PixelFormat_R8Snorm,
+    PixelFormat_R8Uint,
+    PixelFormat_R8Sint,
+    // 16-bit formats
+    PixelFormat_R16Unorm,
+    PixelFormat_R16Snorm,
+    PixelFormat_R16Uint,
+    PixelFormat_R16Sint,
+    PixelFormat_R16Float,
+    PixelFormat_RG8Unorm,
+    PixelFormat_RG8Snorm,
+    PixelFormat_RG8Uint,
+    PixelFormat_RG8Sint,
+    // Packed 16-Bit formats
+    PixelFormat_BGRA4Unorm,
+    PixelFormat_B5G6R5Unorm,
+    PixelFormat_BGR5A1Unorm,
+    // 32-bit formats
+    PixelFormat_R32Uint,
+    PixelFormat_R32Sint,
+    PixelFormat_R32Float,
+    PixelFormat_RG16Unorm,
+    PixelFormat_RG16Snorm,
+    PixelFormat_RG16Uint,
+    PixelFormat_RG16Sint,
+    PixelFormat_RG16Float,
+    PixelFormat_RGBA8Unorm,
+    PixelFormat_RGBA8UnormSrgb,
+    PixelFormat_RGBA8Snorm,
+    PixelFormat_RGBA8Uint,
+    PixelFormat_RGBA8Sint,
+    PixelFormat_BGRA8Unorm,
+    PixelFormat_BGRA8UnormSrgb,
+    // Packed 32-Bit Pixel Formats
+    PixelFormat_RGB10A2Unorm,
+    PixelFormat_RGB10A2Uint,
+    PixelFormat_RG11B10UFloat,
+    PixelFormat_RGB9E5UFloat,
+    // 64-bit formats
+    PixelFormat_RG32Uint,
+    PixelFormat_RG32Sint,
+    PixelFormat_RG32Float,
+    PixelFormat_RGBA16Unorm,
+    PixelFormat_RGBA16Snorm,
+    PixelFormat_RGBA16Uint,
+    PixelFormat_RGBA16Sint,
+    PixelFormat_RGBA16Float,
+    // 128-bit formats
+    PixelFormat_RGBA32Uint,
+    PixelFormat_RGBA32Sint,
+    PixelFormat_RGBA32Float,
+    // Depth-stencil formats
+    PixelFormat_Depth16Unorm,
+    PixelFormat_Depth24UnormStencil8,
+    PixelFormat_Depth32Float,
+    PixelFormat_Depth32FloatStencil8,
+    // BC compressed formats
+    PixelFormat_BC1RGBAUnorm,
+    PixelFormat_BC1RGBAUnormSrgb,
+    PixelFormat_BC2RGBAUnorm,
+    PixelFormat_BC2RGBAUnormSrgb,
+    PixelFormat_BC3RGBAUnorm,
+    PixelFormat_BC3RGBAUnormSrgb,
+    PixelFormat_BC4RUnorm,
+    PixelFormat_BC4RSnorm,
+    PixelFormat_BC5RGUnorm,
+    PixelFormat_BC5RGSnorm,
+    PixelFormat_BC6HRGBUfloat,
+    PixelFormat_BC6HRGBFloat,
+    PixelFormat_BC7RGBAUnorm,
+    PixelFormat_BC7RGBAUnormSrgb,
+    // ETC2/EAC compressed formats
+    PixelFormat_ETC2RGB8Unorm,
+    PixelFormat_ETC2RGB8UnormSrgb,
+    PixelFormat_ETC2RGB8A1Unorm,
+    PixelFormat_ETC2RGB8A1UnormSrgb,
+    PixelFormat_ETC2RGBA8Unorm,
+    PixelFormat_ETC2RGBA8UnormSrgb,
+    PixelFormat_EACR11Unorm,
+    PixelFormat_EACR11Snorm,
+    PixelFormat_EACRG11Unorm,
+    PixelFormat_EACRG11Snorm,
+    // ASTC compressed formats
+    PixelFormat_ASTC4x4Unorm,
+    PixelFormat_ASTC4x4UnormSrgb,
+    PixelFormat_ASTC5x4Unorm,
+    PixelFormat_ASTC5x4UnormSrgb,
+    PixelFormat_ASTC5x5Unorm,
+    PixelFormat_ASTC5x5UnormSrgb,
+    PixelFormat_ASTC6x5Unorm,
+    PixelFormat_ASTC6x5UnormSrgb,
+    PixelFormat_ASTC6x6Unorm,
+    PixelFormat_ASTC6x6UnormSrgb,
+    PixelFormat_ASTC8x5Unorm,
+    PixelFormat_ASTC8x5UnormSrgb,
+    PixelFormat_ASTC8x6Unorm,
+    PixelFormat_ASTC8x6UnormSrgb,
+    PixelFormat_ASTC8x8Unorm,
+    PixelFormat_ASTC8x8UnormSrgb,
+    PixelFormat_ASTC10x5Unorm,
+    PixelFormat_ASTC10x5UnormSrgb,
+    PixelFormat_ASTC10x6Unorm,
+    PixelFormat_ASTC10x6UnormSrgb,
+    PixelFormat_ASTC10x8Unorm,
+    PixelFormat_ASTC10x8UnormSrgb,
+    PixelFormat_ASTC10x10Unorm,
+    PixelFormat_ASTC10x10UnormSrgb,
+    PixelFormat_ASTC12x10Unorm,
+    PixelFormat_ASTC12x10UnormSrgb,
+    PixelFormat_ASTC12x12Unorm,
+    PixelFormat_ASTC12x12UnormSrgb,
+
+    _PixelFormat_Count,
+    _PixelFormat_Force32 = 0x7FFFFFFF
+} PixelFormat;
+
+typedef enum ImageDimension {
+    ImageDimension_1D = 0,
+    ImageDimension_2D = 1,
+    ImageDimension_3D = 2,
+    ImageDimension_Force32 = 0x7FFFFFFF
+} ImageDimension;
+
+ALIMER_API AlimerImage Alimer_ImageCreate2D(PixelFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels);
+ALIMER_API AlimerImage Alimer_ImageCreateFromMemory(const void* data, size_t size);
+ALIMER_API void Alimer_ImageDestroy(AlimerImage image);
+
+ALIMER_API ImageDimension Alimer_ImageGetDimension(AlimerImage image);
+ALIMER_API PixelFormat Alimer_ImageGetFormat(AlimerImage image);
+ALIMER_API uint32_t Alimer_ImageGetWidth(AlimerImage image, uint32_t level);
+ALIMER_API uint32_t Alimer_ImageGetHeight(AlimerImage image, uint32_t level);
+ALIMER_API uint32_t Alimer_ImageGetDepth(AlimerImage image, uint32_t level);
+ALIMER_API uint32_t Alimer_ImageGetArraySize(AlimerImage image);
+ALIMER_API uint32_t Alimer_ImageGetMipLevels(AlimerImage image);
+ALIMER_API Bool32 Alimer_ImageIsCubemap(AlimerImage image);
+
+ALIMER_API void* Alimer_ImageGetData(AlimerImage image, size_t* size);
+
+typedef void (ALIMER_CALL* AlimerImageSaveCallback)(AlimerImage image, uint8_t* pData, uint32_t dataSize);
+
+ALIMER_API Bool32 Alimer_ImageSaveBmp(AlimerImage image, AlimerImageSaveCallback callback);
+ALIMER_API Bool32 Alimer_ImageSavePng(AlimerImage image, AlimerImageSaveCallback callback);
+
+/* Audio */
 typedef struct AudioConfig {
     uint32_t listener_count;
     uint32_t channels;
     uint32_t sample_rate;
 } AudioConfig;
-
-ALIMER_API void Alimer_GetVersion(uint32_t* major, uint32_t* minor, uint32_t* patch);
 
 ALIMER_API Bool32 Alimer_AudioInit(void/*const AudioConfig* config*/);
 ALIMER_API void Alimer_AudioShutdown(void);

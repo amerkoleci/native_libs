@@ -1,7 +1,7 @@
-// Copyright © Amer Koleci and Contributors.
+// Copyright (c) Amer Koleci and Contributors.
 // Distributed under the MIT license. See the LICENSE file in the project root for more information.
 
-#include "alimer_image.h"
+#include "alimer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstring>
@@ -47,25 +47,25 @@ std::vector<uint8_t> LoadTexture(const char* fileName)
 void TestPng()
 {
     std::vector<uint8_t> fileData = LoadTexture("10points.png");
-    AlimerImage* image = AlimerImageCreateFromMemory(fileData.data(), fileData.size());
-    ImageDimension dimension = AlimerImageGetDimension(image);
-    ImageFormat format = AlimerImageGetFormat(image);
+    AlimerImage image = Alimer_ImageCreateFromMemory(fileData.data(), fileData.size());
+    ImageDimension dimension = Alimer_ImageGetDimension(image);
+    PixelFormat format = Alimer_ImageGetFormat(image);
 
     assert(dimension == ImageDimension_2D);
-    assert(format == ImageFormat_RGBA8Unorm);
-    AlimerImageDestroy(image);
+    assert(format == PixelFormat_RGBA8UnormSrgb);
+    Alimer_ImageDestroy(image);
 }
 
 void TestHdr()
 {
     std::vector<uint8_t> fileData = LoadTexture("environment.hdr");
-    AlimerImage* image = AlimerImageCreateFromMemory(fileData.data(), fileData.size());
-    ImageDimension dimension = AlimerImageGetDimension(image);
-    ImageFormat format = AlimerImageGetFormat(image);
+    AlimerImage image = Alimer_ImageCreateFromMemory(fileData.data(), fileData.size());
+    ImageDimension dimension = Alimer_ImageGetDimension(image);
+    PixelFormat format = Alimer_ImageGetFormat(image);
 
     assert(dimension == ImageDimension_2D);
-    assert(format == ImageFormat_RGBA32Float);
-    AlimerImageDestroy(image);
+    assert(format == PixelFormat_RGBA32Float);
+    Alimer_ImageDestroy(image);
 }
 
 int main()

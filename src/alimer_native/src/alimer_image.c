@@ -1,28 +1,30 @@
 // Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
-#include "alimer_image.h"
-#include <stdbool.h>
-#include <stdlib.h> // malloc, free
-#include <string.h> // memset
-#include <assert.h>
+#include "alimer_internal.h"
 
-#define _min(a,b) (((a)<(b))?(a):(b))
-#define _max(a,b) (((a)>(b))?(a):(b))
-
+ALIMER_DISABLE_WARNINGS()
 #define STBI_NO_STDIO
-#define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
+#define STB_IMAGE_IMPLEMENTATION
 #include "third_party/stb_image.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STBI_WRITE_NO_STDIO
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "third_party/stb_image_write.h"
+
+#define QOI_NO_STDIO
+#define QOI_IMPLEMENTATION
+#define QOI_MALLOC(sz) STBI_MALLOC(sz)
+#define QOI_FREE(p) STBI_FREE(p) 
+#include "third_party/qoi.h"
 //#include <ktx.h>
 
-struct AlimerImage {
+ALIMER_ENABLE_WARNINGS()
+
+typedef struct AlimerImageImpl {
     ImageDimension  dimension;
-    ImageFormat     format;
+    PixelFormat     format;
     uint32_t        width;
     uint32_t        height;
     uint32_t        depthOrArraySize;
@@ -31,19 +33,19 @@ struct AlimerImage {
 
     size_t          dataSize;
     void*           pData;
-};
+} AlimerImageImpl;
 
-static AlimerImage* dds_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage dds_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 }
 
-static AlimerImage* astc_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage astc_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 }
 
-static AlimerImage* ktx_load_from_memory(const uint8_t* data, size_t size)
+static AlimerImage ktx_load_from_memory(const uint8_t* data, size_t size)
 {
     return NULL;
 
@@ -96,7 +98,7 @@ static AlimerImage* ktx_load_from_memory(const uint8_t* data, size_t size)
     result->isCubemap = ktx_texture->isCubemap;
 
     result->dataSize = (uint32_t)ktx_texture->dataSize;
-    result->pData = malloc(ktx_texture->dataSize);
+    result->pData = Alimer_alloc(ktx_texture->dataSize);
     memcpy(result->pData, ktx_texture->pData, ktx_texture->dataSize);
     ktxTexture_Destroy(ktx_texture);
     return result;
@@ -104,10 +106,47 @@ static AlimerImage* ktx_load_from_memory(const uint8_t* data, size_t size)
 
 }
 
-static AlimerImage* stb_load_from_memory(const uint8_t* data, size_t size)
+bool AlimerImage_TestQOI(const uint8_t* data, size_t size)
+{
+    if (size < 4)
+        return false;
+
+    for (size_t i = 0; i < ALIMER_MAX(4, size); i++)
+    {
+        if (data[i] != "qoif"[i])
+            return false;
+    }
+
+    return true;
+}
+
+static AlimerImage qoi_load_from_memory(const uint8_t* data, size_t size)
+{
+    if (!AlimerImage_TestQOI(data, size))
+        return NULL;
+
+    int channels = 4;
+    qoi_desc qoi_desc;
+    void* result = qoi_decode(data, (int)size, &qoi_desc, channels);
+
+    if (result != NULL)
+    {
+        AlimerImage image = Alimer_ImageCreate2D(PixelFormat_RGBA8Unorm, qoi_desc.width, qoi_desc.height, 1u, 1u);
+        image->dataSize = qoi_desc.width * qoi_desc.height * channels * sizeof(uint8_t);
+        image->pData = Alimer_alloc(image->dataSize);
+        memcpy(image->pData, result, image->dataSize);
+
+        QOI_FREE(result);
+        return image;
+    }
+
+    return NULL;
+}
+
+static AlimerImage stb_load_from_memory(const uint8_t* data, size_t size, bool srgb)
 {
     int width, height, channels;
-    ImageFormat format = ImageFormat_RGBA8Unorm;
+    PixelFormat format = PixelFormat_RGBA8Unorm;
     void* image_data;
     uint32_t memorySize = 0;
     if (stbi_is_16_bit_from_memory(data, (int)size))
@@ -116,15 +155,15 @@ static AlimerImage* stb_load_from_memory(const uint8_t* data, size_t size)
         switch (channels)
         {
             case 1:
-                format = ImageFormat_R16Uint;
+                format = PixelFormat_R16Uint;
                 memorySize = width * height * sizeof(uint16_t);
                 break;
             case 2:
-                format = ImageFormat_RG16Uint;
+                format = PixelFormat_RG16Uint;
                 memorySize = width * height * 2 * sizeof(uint16_t);
                 break;
             case 4:
-                format = ImageFormat_RGBA16Uint;
+                format = PixelFormat_RGBA16Uint;
                 memorySize = width * height * 4 * sizeof(uint16_t);
                 break;
             default:
@@ -134,13 +173,13 @@ static AlimerImage* stb_load_from_memory(const uint8_t* data, size_t size)
     else if (stbi_is_hdr_from_memory(data, (int)size))
     {
         image_data = stbi_loadf_from_memory(data, (int)size, &width, &height, &channels, 4);
-        format = ImageFormat_RGBA32Float;
+        format = PixelFormat_RGBA32Float;
         memorySize = width * height * 4 * sizeof(float);
     }
     else
     {
         image_data = stbi_load_from_memory(data, (int)size, &width, &height, &channels, 4);
-        format = ImageFormat_RGBA8Unorm;
+        format = srgb ? PixelFormat_RGBA8UnormSrgb : PixelFormat_RGBA8Unorm;
         memorySize = width * height * 4 * sizeof(uint8_t);
     }
 
@@ -148,9 +187,9 @@ static AlimerImage* stb_load_from_memory(const uint8_t* data, size_t size)
         return NULL;
     }
 
-    AlimerImage* result = AlimerImageCreate2D(format, width, height, 1, 1);
+    AlimerImage result = Alimer_ImageCreate2D(format, width, height, 1, 1);
     result->dataSize = memorySize;
-    result->pData = malloc(memorySize);
+    result->pData = Alimer_alloc(memorySize);
     memcpy(result->pData, image_data, memorySize);
     stbi_image_free(image_data);
     return result;
@@ -164,7 +203,7 @@ bool IsPow2(size_t x)
 
 uint32_t CountMips(uint32_t width, uint32_t height)
 {
-    size_t mipLevels = 1;
+    uint32_t mipLevels = 1;
 
     while (height > 1 || width > 1)
     {
@@ -200,81 +239,81 @@ bool CalculateMipLevels(uint32_t width, uint32_t height, uint32_t* mipLevels)
     return true;
 }
 
-uint32_t BitsPerPixel(ImageFormat format)
+uint32_t BitsPerPixel(PixelFormat format)
 {
     switch (format)
     {
-        case ImageFormat_RGBA32Uint:
-        case ImageFormat_RGBA32Sint:
-        case ImageFormat_RGBA32Float:
+        case PixelFormat_RGBA32Uint:
+        case PixelFormat_RGBA32Sint:
+        case PixelFormat_RGBA32Float:
             return 128;
 
-        case ImageFormat_RG32Uint:
-        case ImageFormat_RG32Sint:
-        case ImageFormat_RG32Float:
-        case ImageFormat_RGBA16Unorm:
-        case ImageFormat_RGBA16Snorm:
-        case ImageFormat_RGBA16Uint:
-        case ImageFormat_RGBA16Sint:
-        case ImageFormat_RGBA16Float:
+        case PixelFormat_RG32Uint:
+        case PixelFormat_RG32Sint:
+        case PixelFormat_RG32Float:
+        case PixelFormat_RGBA16Unorm:
+        case PixelFormat_RGBA16Snorm:
+        case PixelFormat_RGBA16Uint:
+        case PixelFormat_RGBA16Sint:
+        case PixelFormat_RGBA16Float:
             return 64;
 
-        case ImageFormat_R32Uint:
-        case ImageFormat_R32Sint:
-        case ImageFormat_R32Float:
-        case ImageFormat_RG16Unorm:
-        case ImageFormat_RG16Snorm:
-        case ImageFormat_RG16Uint:
-        case ImageFormat_RG16Sint:
-        case ImageFormat_RG16Float:
-        case ImageFormat_RGBA8Unorm:
-        case ImageFormat_RGBA8UnormSrgb:
-        case ImageFormat_RGBA8Snorm:
-        case ImageFormat_RGBA8Uint:
-        case ImageFormat_RGBA8Sint:
-        case ImageFormat_BGRA8Unorm:
-        case ImageFormat_BGRA8UnormSrgb:
-        case ImageFormat_RGB10A2Unorm:
-        case ImageFormat_RGB10A2Uint:
-        case ImageFormat_RG11B10Float:
-        case ImageFormat_RGB9E5Float:
+        case PixelFormat_R32Uint:
+        case PixelFormat_R32Sint:
+        case PixelFormat_R32Float:
+        case PixelFormat_RG16Unorm:
+        case PixelFormat_RG16Snorm:
+        case PixelFormat_RG16Uint:
+        case PixelFormat_RG16Sint:
+        case PixelFormat_RG16Float:
+        case PixelFormat_RGBA8Unorm:
+        case PixelFormat_RGBA8UnormSrgb:
+        case PixelFormat_RGBA8Snorm:
+        case PixelFormat_RGBA8Uint:
+        case PixelFormat_RGBA8Sint:
+        case PixelFormat_BGRA8Unorm:
+        case PixelFormat_BGRA8UnormSrgb:
+        case PixelFormat_RGB10A2Unorm:
+        case PixelFormat_RGB10A2Uint:
+        case PixelFormat_RG11B10UFloat:
+        case PixelFormat_RGB9E5UFloat:
             return 32;
 
-        case ImageFormat_R16Unorm:
-        case ImageFormat_R16Snorm:
-        case ImageFormat_R16Uint:
-        case ImageFormat_R16Sint:
-        case ImageFormat_R16Float:
-        case ImageFormat_RG8Unorm:
-        case ImageFormat_RG8Snorm:
-        case ImageFormat_RG8Uint:
-        case ImageFormat_RG8Sint:
+        case PixelFormat_R16Unorm:
+        case PixelFormat_R16Snorm:
+        case PixelFormat_R16Uint:
+        case PixelFormat_R16Sint:
+        case PixelFormat_R16Float:
+        case PixelFormat_RG8Unorm:
+        case PixelFormat_RG8Snorm:
+        case PixelFormat_RG8Uint:
+        case PixelFormat_RG8Sint:
             // Packed 16-Bit formats
-        case ImageFormat_BGRA4Unorm:
-        case ImageFormat_B5G6R5Unorm:
-        case ImageFormat_BGR5A1Unorm:
+        case PixelFormat_BGRA4Unorm:
+        case PixelFormat_B5G6R5Unorm:
+        case PixelFormat_BGR5A1Unorm:
             return 16;
 
-        case ImageFormat_R8Unorm:
-        case ImageFormat_R8Snorm:
-        case ImageFormat_R8Uint:
-        case ImageFormat_R8Sint:
-        case ImageFormat_BC2RGBAUnorm:
-        case ImageFormat_BC2RGBAUnormSrgb:
-        case ImageFormat_BC3RGBAUnorm:
-        case ImageFormat_BC3RGBAUnormSrgb:
-        case ImageFormat_BC5RGUnorm:
-        case ImageFormat_BC5RGSnorm:
-        case ImageFormat_BC6HRGBUfloat:
-        case ImageFormat_BC6HRGBFloat:
-        case ImageFormat_BC7RGBAUnorm:
-        case ImageFormat_BC7RGBAUnormSrgb:
+        case PixelFormat_R8Unorm:
+        case PixelFormat_R8Snorm:
+        case PixelFormat_R8Uint:
+        case PixelFormat_R8Sint:
+        case PixelFormat_BC2RGBAUnorm:
+        case PixelFormat_BC2RGBAUnormSrgb:
+        case PixelFormat_BC3RGBAUnorm:
+        case PixelFormat_BC3RGBAUnormSrgb:
+        case PixelFormat_BC5RGUnorm:
+        case PixelFormat_BC5RGSnorm:
+        case PixelFormat_BC6HRGBUfloat:
+        case PixelFormat_BC6HRGBFloat:
+        case PixelFormat_BC7RGBAUnorm:
+        case PixelFormat_BC7RGBAUnormSrgb:
             return 8;
 
-        case ImageFormat_BC1RGBAUnorm:
-        case ImageFormat_BC1RGBAUnormSrgb:
-        case ImageFormat_BC4RUnorm:
-        case ImageFormat_BC4RSnorm:
+        case PixelFormat_BC1RGBAUnorm:
+        case PixelFormat_BC1RGBAUnormSrgb:
+        case PixelFormat_BC4RUnorm:
+        case PixelFormat_BC4RSnorm:
             return 4;
 
         default:
@@ -282,7 +321,7 @@ uint32_t BitsPerPixel(ImageFormat format)
     }
 }
 
-bool GetSurfaceInfo(ImageFormat format, uint32_t width, uint32_t height, uint32_t* pRowPitch, uint32_t* pSlicePitch, uint32_t* pRowCount)
+bool GetSurfaceInfo(PixelFormat format, uint32_t width, uint32_t height, uint32_t* pRowPitch, uint32_t* pSlicePitch, uint32_t* pRowCount)
 {
     uint32_t rowPitch = 0;
     uint32_t slicePitch = 0;
@@ -291,28 +330,28 @@ bool GetSurfaceInfo(ImageFormat format, uint32_t width, uint32_t height, uint32_
     bool bc = false;
     bool packed = false;
     bool planar = false;
-    size_t bpe = 0;
+    uint32_t bpe = 0;
 
     switch (format)
     {
-        case ImageFormat_BC1RGBAUnorm:
-        case ImageFormat_BC1RGBAUnormSrgb:
-        case ImageFormat_BC4RUnorm:
-        case ImageFormat_BC4RSnorm:
+        case PixelFormat_BC1RGBAUnorm:
+        case PixelFormat_BC1RGBAUnormSrgb:
+        case PixelFormat_BC4RUnorm:
+        case PixelFormat_BC4RSnorm:
             bc = true;
             bpe = 8;
             break;
 
-        case ImageFormat_BC2RGBAUnorm:
-        case ImageFormat_BC2RGBAUnormSrgb:
-        case ImageFormat_BC3RGBAUnorm:
-        case ImageFormat_BC3RGBAUnormSrgb:
-        case ImageFormat_BC5RGUnorm:
-        case ImageFormat_BC5RGSnorm:
-        case ImageFormat_BC6HRGBUfloat:
-        case ImageFormat_BC6HRGBFloat:
-        case ImageFormat_BC7RGBAUnorm:
-        case ImageFormat_BC7RGBAUnormSrgb:
+        case PixelFormat_BC2RGBAUnorm:
+        case PixelFormat_BC2RGBAUnormSrgb:
+        case PixelFormat_BC3RGBAUnorm:
+        case PixelFormat_BC3RGBAUnormSrgb:
+        case PixelFormat_BC5RGUnorm:
+        case PixelFormat_BC5RGSnorm:
+        case PixelFormat_BC6HRGBUfloat:
+        case PixelFormat_BC6HRGBFloat:
+        case PixelFormat_BC7RGBAUnorm:
+        case PixelFormat_BC7RGBAUnormSrgb:
             bc = true;
             bpe = 16;
             break;
@@ -326,12 +365,12 @@ bool GetSurfaceInfo(ImageFormat format, uint32_t width, uint32_t height, uint32_
         uint32_t numBlocksWide = 0;
         if (width > 0)
         {
-            numBlocksWide = _max(1u, (width + 3u) / 4u);
+            numBlocksWide = ALIMER_MAX(1u, (width + 3u) / 4u);
         }
         uint32_t numBlocksHigh = 0;
         if (height > 0)
         {
-            numBlocksHigh = _max(1u, (height + 3u) / 4u);
+            numBlocksHigh = ALIMER_MAX(1u, (height + 3u) / 4u);
         }
         rowPitch = numBlocksWide * bpe;
         slicePitch = rowPitch * numBlocksHigh;
@@ -375,7 +414,7 @@ bool GetSurfaceInfo(ImageFormat format, uint32_t width, uint32_t height, uint32_
     return true;
 }
 
-bool DetermineImageArray(AlimerImage* image)
+bool DetermineImageArray(AlimerImage image)
 {
     assert(image->width > 0 && image->height > 0 && image->depthOrArraySize > 0);
     assert(image->mipLevels > 0);
@@ -414,9 +453,9 @@ bool DetermineImageArray(AlimerImage* image)
 
         case ImageDimension_3D:
         {
-            size_t w = image->width;
-            size_t h = image->height;
-            size_t d = image->depthOrArraySize;
+            uint32_t w = image->width;
+            uint32_t h = image->height;
+            uint32_t d = image->depthOrArraySize;
 
             for (uint32_t mipLevel = 0; mipLevel < image->mipLevels; ++mipLevel)
             {
@@ -454,17 +493,16 @@ bool DetermineImageArray(AlimerImage* image)
     return true;
 }
 
-AlimerImage* AlimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels)
+AlimerImage Alimer_ImageCreate2D(PixelFormat format, uint32_t width, uint32_t height, uint32_t arraySize, uint32_t mipLevels)
 {
-    if (format == ImageFormat_Undefined || !width || !height || !arraySize)
+    if (format == PixelFormat_Undefined || !width || !height || !arraySize)
         return NULL;
 
     if (!CalculateMipLevels(width, height, &mipLevels))
         return NULL;
 
-    AlimerImage* image = (AlimerImage*)malloc(sizeof(AlimerImage));
+    AlimerImageImpl* image = ALIMER_ALLOC(AlimerImageImpl);
     assert(image);
-    memset(image, 0, sizeof(AlimerImage));
 
     image->dimension = ImageDimension_2D;
     image->format = format;
@@ -475,16 +513,16 @@ AlimerImage* AlimerImageCreate2D(ImageFormat format, uint32_t width, uint32_t he
     image->isCubemap = false;
     if (!DetermineImageArray(image))
     {
-        free(image);
+        ALIMER_FREE(image);
         return NULL;
     }
 
     return image;
 }
 
-AlimerImage* AlimerImageCreateFromMemory(const void* data, size_t size)
+AlimerImage Alimer_ImageCreateFromMemory(const void* data, size_t size)
 {
-    AlimerImage* image = NULL;
+    AlimerImage image = NULL;
 
     if ((image = dds_load_from_memory(data, size)) != NULL) {
         return image;
@@ -498,87 +536,100 @@ AlimerImage* AlimerImageCreateFromMemory(const void* data, size_t size)
         return image;
     }
 
-    if ((image = stb_load_from_memory(data, size)) != NULL) {
+    if ((image = qoi_load_from_memory(data, size)) != NULL) {
+        return image;
+    }
+
+    if ((image = stb_load_from_memory(data, size, true)) != NULL) {
         return image;
     }
 
     return NULL;
 }
 
-void AlimerImageDestroy(AlimerImage* image)
+void Alimer_ImageDestroy(AlimerImage image)
 {
     if (!image)
         return;
 
-    if (image->pData) {
-        free(image->pData);
+    if (image->pData)
+    {
+        ALIMER_FREE(image->pData);
     }
 
-    free(image);
+    ALIMER_FREE(image);
 }
 
-ImageDimension AlimerImageGetDimension(AlimerImage* image)
+ImageDimension Alimer_ImageGetDimension(AlimerImage image)
 {
     return image->dimension;
 }
 
-ImageFormat AlimerImageGetFormat(AlimerImage* image)
+PixelFormat Alimer_ImageGetFormat(AlimerImage image)
 {
     return image->format;
 }
 
-uint32_t AlimerImageGetWidth(AlimerImage* image, uint32_t level)
+uint32_t Alimer_ImageGetWidth(AlimerImage image, uint32_t level)
 {
-    return _max(image->width >> level, 1);
+    return ALIMER_MAX(image->width >> level, 1);
 }
 
-uint32_t AlimerImageGetHeight(AlimerImage* image, uint32_t level)
+uint32_t Alimer_ImageGetHeight(AlimerImage image, uint32_t level)
 {
-    return _max(image->height >> level, 1);
+    return ALIMER_MAX(image->height >> level, 1);
 }
 
-uint32_t AlimerImageGetDepth(AlimerImage* image, uint32_t level)
+uint32_t Alimer_ImageGetDepth(AlimerImage image, uint32_t level)
 {
     if (image->dimension != ImageDimension_3D) {
         return 1u;
     }
 
-    return _max(image->depthOrArraySize >> level, 1);
+    return ALIMER_MAX(image->depthOrArraySize >> level, 1);
 }
 
-uint32_t AlimerImageGetArraySize(AlimerImage* image)
+uint32_t Alimer_ImageGetArraySize(AlimerImage image)
 {
     if (image->dimension == ImageDimension_3D) {
         return 1u;
     }
 
-    return image->depthOrArraySize;
+    return ALIMER_MAX(image->depthOrArraySize, 1u);
 }
 
-uint32_t AlimerImageGetMipLevels(AlimerImage* image)
+uint32_t Alimer_ImageGetMipLevels(AlimerImage image)
 {
     return image->mipLevels;
 }
 
-Bool32 AlimerImageIsCubemap(AlimerImage* image)
+Bool32 Alimer_ImageIsCubemap(AlimerImage image)
 {
     return image->isCubemap;
 }
 
-void* AlimerImageGetData(AlimerImage* image, size_t* size)
+void* Alimer_ImageGetData(AlimerImage image, size_t* size)
 {
-    *size = image->dataSize;
+    if(size)
+        *size = image->dataSize;
+
     return image->pData;
 }
 
-Bool32 AlimerImageSavePngMemory(AlimerImage* image, AlimerImageSaveCallback callback)
+Bool32 Alimer_ImageSaveBmp(AlimerImage image, AlimerImageSaveCallback callback)
 {
-    int len;
-    uint8_t* data = stbi_write_png_to_mem(image->pData, image->width * 4, image->width, image->height, 4, &len);
-    if (data == NULL)
-        return false;
+    int res = stbi_write_bmp_to_func((stbi_write_func*)callback, image, image->width, image->height, 4, image->pData);
+    if (res != 0)
+        return true;
 
-    callback(data, len);
-    STBIW_FREE(data);
-    return true;
+    return false;
+}
+
+Bool32 Alimer_ImageSavePng(AlimerImage image, AlimerImageSaveCallback callback)
+{
+    int res = stbi_write_png_to_func((stbi_write_func*)callback, image, image->width, image->height, 4, image->pData, image->width * 4);
+    if (res != 0)
+        return true;
+
+    return false;
 }

@@ -8,6 +8,7 @@ add_library(${TARGET_NAME}
     src/alimer_internal.h
     # Source files
     src/alimer_memory.c
+    src/alimer_image.c
     src/alimer_audio.c
     src/alimer_font.c
 )
