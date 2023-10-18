@@ -6,6 +6,9 @@ add_subdirectory(third_party)
 # Alimer native library
 add_subdirectory(alimer_native)
 
+# Alimer GPU
+add_subdirectory(alimer_gpu)
+
 # cimgui
 add_subdirectory(cimgui)
 

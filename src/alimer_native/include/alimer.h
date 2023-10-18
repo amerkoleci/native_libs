@@ -298,4 +298,4 @@ ALIMER_API float Alimer_FontGetKerning(AlimerFont font, int glyph1, int glyph2, 
 ALIMER_API void Alimer_FontGetCharacter(AlimerFont font, int glyph, float scale, int* width, int* height, float* advance, float* offsetX, float* offsetY, int* visible);
 ALIMER_API void Alimer_FontGetPixels(AlimerFont font, uint8_t* dest, int glyph, int width, int height, float scale);
 
-#endif /* _ALIMER_AUDIO_H_ */
+#endif /* ALIMER_H */
