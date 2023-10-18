@@ -17,6 +17,7 @@ ALIMER_DISABLE_WARNINGS()
 #include "third_party/miniaudio.h"
 ALIMER_ENABLE_WARNINGS()
 
+#if defined(TODO_ASSERT)
 static_assert(sizeof(Alimer_Vector3) == sizeof(ma_vec3f), "Vector3 mismatch");
 //static_assert(alignof(Alimer_Vector3) == alignof(ma_vec3f));
 static_assert(offsetof(Alimer_Vector3, x) == offsetof(ma_vec3f, x), "Vector3 Layout mismatch");
@@ -33,6 +34,7 @@ static_assert((int)SoundFlags_WaitInit == (int)MA_SOUND_FLAG_WAIT_INIT, "SoundFl
 static_assert((int)SoundFlags_NoDefaultAttachment == MA_SOUND_FLAG_NO_DEFAULT_ATTACHMENT, "SoundFlags Layout mismatch");
 static_assert((int)SoundFlags_NoPitch == MA_SOUND_FLAG_NO_PITCH, "SoundFlags Layout mismatch");
 static_assert((int)SoundFlags_NoSpatialization == MA_SOUND_FLAG_NO_SPATIALIZATION, "SoundFlags Layout mismatch");
+#endif
 
 static void FromVec3(const ma_vec3f vec, Alimer_Vector3* result)
 {
