@@ -73,15 +73,36 @@
 #define ALIMER_CLAMP(val, min, max) ALIMER_MAX(min, ALIMER_MIN(val, max))
 #define _check_flags(flags, flag) (((flags) & (flag)) != 0)
 
+_ALIMER_GPU_EXTERN void AlimerLogInfo(const char* fmt, ...);
+_ALIMER_GPU_EXTERN void AlimerLogWarn(const char* fmt, ...);
+_ALIMER_GPU_EXTERN void AlimerLogError(const char* fmt, ...);
+
+
+#if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) && !defined(__ILP32__) ) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
+typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
+#else
+typedef uint64_t VkSurfaceKHR;
+#endif
+
+typedef struct GPUSurfaceImpl
+{
+    void* windowHandle;
+    struct {
+        VkSurfaceKHR handle;
+    } vk;
+} GPUSurfaceImpl;
+
 typedef struct GPUDriver
 {
     GPUBackendType backend;
     bool(*IsSupported)(void);
     bool(*Init)(const GPUConfig* config);
     void(*Shutdown)(void);
+    bool(*InitSurface)(GPUSurface surface);
     GPUDevice (*CreateDevice)(/*const VGPUDeviceDescriptor* descriptor*/);
 } GPUDriver;
 
+_ALIMER_GPU_EXTERN GPUDriver D3D12_Driver;
 _ALIMER_GPU_EXTERN GPUDriver Vulkan_Driver;
 
 #endif /* ALIMER_INTERNAL_H */

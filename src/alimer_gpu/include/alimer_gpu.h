@@ -45,6 +45,7 @@ typedef uint32_t GPUBool32;
 #define ALIMER_GPU_VERSION_PATCH	0
 
 /* Types */
+typedef struct GPUSurfaceImpl* GPUSurface;
 typedef struct GPUDeviceImpl* GPUDevice;
 typedef struct GPUBufferImpl* GPUBuffer;
 typedef struct GPUTextureImpl* GPUTexture;
@@ -88,6 +89,39 @@ typedef enum GPUCommandQueue {
 } GPUCommandQueue;
 
 /* Structs */
+typedef struct GPUViewport {
+    float x;
+    float y;
+    float width;
+    float height;
+    float minDepth;
+    float maxDepth;
+} GPUViewport;
+
+typedef struct GPUDispatchIndirectCommand
+{
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
+} GPUDispatchIndirectCommand;
+
+typedef struct GPUDrawIndirectCommand
+{
+    uint32_t vertexCount;
+    uint32_t instanceCount;
+    uint32_t firstVertex;
+    uint32_t firstInstance;
+} GPUDrawIndirectCommand;
+
+typedef struct GPUDrawIndexedIndirectCommand
+{
+    uint32_t indexCount;
+    uint32_t instanceCount;
+    uint32_t firstIndex;
+    int32_t  baseVertex;
+    uint32_t firstInstance;
+} GPUDrawIndexedIndirectCommand;
+
 typedef struct GPUConfig {
     GPUValidationMode validationMode;
     void* userdata;
@@ -100,5 +134,7 @@ ALIMER_GPU_API void GPU_GetVersion(int* major, int* minor, int* patch);
 
 ALIMER_GPU_API GPUBool32 GPU_Init(const GPUConfig* config);
 ALIMER_GPU_API void GPU_Shutdown(void);
+
+ALIMER_GPU_API GPUSurface GPU_CreateSurface(void* windowHandle);
 
 #endif /* ALIMER_GPU_H */

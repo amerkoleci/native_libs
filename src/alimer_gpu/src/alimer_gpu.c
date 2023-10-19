@@ -2,17 +2,66 @@
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 #include "alimer_gpu_internal.h"
+#include <stdio.h>
+#include <stdarg.h>
+
+static struct {
+    GPUConfig config;
+} state;
+
+#define GPU_MAX_MESSAGE_SIZE 1024
+
+void AlimerLogInfo(const char* fmt, ...)
+{
+    if (!state.config.callback)
+        return;
+
+    char msg[GPU_MAX_MESSAGE_SIZE];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    state.config.callback(state.config.userdata, msg, false);
+}
+
+void AlimerLogWarn(const char* fmt, ...)
+{
+    if (!state.config.callback)
+        return;
+
+    char msg[GPU_MAX_MESSAGE_SIZE];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    state.config.callback(state.config.userdata, msg, false);
+}
+
+void AlimerLogError(const char* fmt, ...)
+{
+    if (!state.config.callback)
+        return;
+
+    char msg[GPU_MAX_MESSAGE_SIZE];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    state.config.callback(state.config.userdata, msg, true);
+}
 
 static const GPUDriver* drivers[] = {
+#if defined(ALIMER_D3D12)
+    &D3D12_Driver,
+#endif
 #if defined(ALIMER_VULKAN)
     &Vulkan_Driver,
 #endif
     NULL
 };
-
-static struct {
-    GPUConfig config;
-} state;
 
 void GPU_GetVersion(int* major, int* minor, int* patch)
 {
@@ -52,4 +101,23 @@ void GPU_Shutdown(void)
             drivers[i]->Shutdown();
         }
     }
+}
+
+GPUSurface GPU_CreateSurface(void* windowHandle)
+{
+    GPUSurfaceImpl* surface = (GPUSurfaceImpl*)malloc(sizeof(GPUSurfaceImpl));
+    memset(surface, 0, sizeof(GPUSurfaceImpl));
+
+    for (uint32_t i = 0; i < ALIMER_ARRAYSIZE(drivers); ++i)
+    {
+        if (!drivers[i])
+            break;;
+
+        if (drivers[i]->IsSupported())
+        {
+            drivers[i]->InitSurface(surface);
+        }
+    }
+
+    return surface;
 }

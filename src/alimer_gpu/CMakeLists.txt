@@ -21,8 +21,21 @@ target_include_directories(${TARGET_NAME}
 	PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
 
-target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
-target_compile_definitions (${TARGET_NAME} PRIVATE ALIMER_VULKAN)
+if(ALIMER_VULKAN)
+    target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
+    target_compile_definitions (${TARGET_NAME} PRIVATE ALIMER_VULKAN)
+endif()
+
+if(ALIMER_D3D12)
+    target_sources(${TARGET_NAME} PRIVATE
+        src/alimer_gpu_d3d12.cpp
+        src/third_party/D3D12MemAlloc.h
+        src/third_party/D3D12MemAlloc.cpp
+    )
+
+    target_link_libraries(${TARGET_NAME} PRIVATE DirectX-Headers)
+    target_compile_definitions (${TARGET_NAME} PRIVATE ALIMER_D3D12)
+endif()
 
 if (MSVC)
     # Set warning level 3

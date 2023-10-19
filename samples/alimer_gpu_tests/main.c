@@ -6,10 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+static void LogCallback(void* userdata, const char* message, GPUBool32 error)
+{
+
+}
+
 int main()
 {
     GPUConfig config;
     memset(&config, 0, sizeof(config));
+
+    config.callback = LogCallback;
 
 #if defined(_DEBUG)
     config.validationMode = GPUValidationMode_Enabled;

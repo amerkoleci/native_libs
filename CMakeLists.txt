@@ -70,19 +70,6 @@ endif()
 
 include(GNUInstallDirs)
 
-# Options
-if (IOS OR EMSCRIPTEN)
-    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Disable shared library on (IOS, WEB)" FORCE)
-elseif(ANDROID)
-    set(BUILD_SHARED_LIBS ON CACHE BOOL "Always enable shared library on (ANDROID)" FORCE)    
-else()
-    option(BUILD_SHARED_LIBS "Build shared library" ON)
-endif ()
-
-# Options
-option(LIB_INSTALL "Generate the install target" ${LIB_MASTER_PROJECT})
-option(LIB_SAMPLES "Build samples" ${LIB_MASTER_PROJECT})
-
 # Setting Platform
 if(EMSCRIPTEN)
     set(LIB_PLATFORM_NAME "Web")
@@ -164,6 +151,25 @@ elseif(WIN32)
 	set(CMAKE_SHARED_LIBRARY_PREFIX "")
 endif()
 
+# Options
+if (IOS OR EMSCRIPTEN)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Disable shared library on (IOS, WEB)" FORCE)
+elseif(ANDROID)
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "Always enable shared library on (ANDROID)" FORCE)    
+else()
+    option(BUILD_SHARED_LIBS "Build shared library" ON)
+endif ()
+
+# Options
+option(LIB_INSTALL "Generate the install target" ${LIB_MASTER_PROJECT})
+option(LIB_SAMPLES "Build samples" ${LIB_MASTER_PROJECT})
+
+option(ALIMER_VULKAN "Make Vulkan backend available" ON)
+option(ALIMER_WEBGPU "Make WebGPU backend available" ON)
+if (WIN32 OR WINDOWS_STORE)
+	option(ALIMER_D3D12 "Make D3D12 backend available" ON)
+endif()
+
 # Print current build configuration
 message(STATUS "Engine version: ${LIB_VERSION}")
 message(STATUS "GIT Revision ID: ${LIB_REVISION_ID}")
@@ -181,6 +187,15 @@ if (BUILD_SHARED_LIBS)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
+
+if(ALIMER_VULKAN)
+    message(STATUS "  Vulkan          ON")
+endif()
+
+if(ALIMER_D3D12)
+    message(STATUS "  D3D12           ON")
+endif()
+
 
 message(STATUS "  Samples         ${LIB_SAMPLES}")
 
