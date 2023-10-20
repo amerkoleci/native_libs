@@ -104,7 +104,7 @@ void GPU_Shutdown(void)
     }
 }
 
-GPUSurface GPU_CreateSurface(void* windowHandle)
+GPUSurface GPU_CreateSurface(uintptr_t windowHandle)
 {
     GPUSurfaceImpl* surface = (GPUSurfaceImpl*)malloc(sizeof(GPUSurfaceImpl));
     ALIMER_ASSERT(surface);

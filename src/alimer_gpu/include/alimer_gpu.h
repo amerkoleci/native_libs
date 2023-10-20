@@ -135,6 +135,6 @@ ALIMER_GPU_API void GPU_GetVersion(int* major, int* minor, int* patch);
 ALIMER_GPU_API GPUBool32 GPU_Init(const GPUConfig* config);
 ALIMER_GPU_API void GPU_Shutdown(void);
 
-ALIMER_GPU_API GPUSurface GPU_CreateSurface(void* windowHandle);
+ALIMER_GPU_API GPUSurface GPU_CreateSurface(uintptr_t windowHandle);
 
 #endif /* ALIMER_GPU_H */

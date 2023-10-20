@@ -90,7 +90,7 @@ typedef uint64_t VkSurfaceKHR;
 
 typedef struct GPUSurfaceImpl
 {
-    void* windowHandle;
+    uintptr_t windowHandle;
     struct {
         VkSurfaceKHR handle;
     } vk;

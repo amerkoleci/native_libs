@@ -74,7 +74,7 @@ if (MSVC)
     # Use fast floating point model
     target_compile_options(${TARGET_NAME} PRIVATE /fp:fast "$<$<NOT:$<CONFIG:DEBUG>>:/guard:cf>")
 else()
-    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra)
+    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Wunused-variable)
 endif()
 
 if(WIN32)
