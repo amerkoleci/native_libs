@@ -38,16 +38,25 @@ typedef struct AlimerImageImpl {
 
 static AlimerImage dds_load_from_memory(const uint8_t* data, size_t size)
 {
+    ALIMER_UNUSED(data);
+    ALIMER_UNUSED(size);
+
     return NULL;
 }
 
 static AlimerImage astc_load_from_memory(const uint8_t* data, size_t size)
 {
+    ALIMER_UNUSED(data);
+    ALIMER_UNUSED(size);
+
     return NULL;
 }
 
 static AlimerImage ktx_load_from_memory(const uint8_t* data, size_t size)
 {
+    ALIMER_UNUSED(data);
+    ALIMER_UNUSED(size);
+
     return NULL;
 
 #if TODO_KTX

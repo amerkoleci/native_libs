@@ -24,7 +24,9 @@
     _Pragma("clang diagnostic ignored \"-Wnullability-completeness\"") \
     _Pragma("clang diagnostic ignored \"-Wnullability-extension\"") \
     _Pragma("clang diagnostic ignored \"-Wunused-parameter\"") \
-    _Pragma("clang diagnostic ignored \"-Wunused-function\"")
+    _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
+    _Pragma("clang diagnostic ignored \"-Wunused-variable\"") \
+    _Pragma("clang diagnostic ignored \"-Wmissing-field-initializers\"")
 
 #define ALIMER_ENABLE_WARNINGS() _Pragma("clang diagnostic pop")
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -39,7 +41,9 @@
 	_Pragma("GCC diagnostic ignored \"-Wextra\"") \
 	_Pragma("GCC diagnostic ignored \"-Wtautological-compare\"") \
     _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
-    _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
+    _Pragma("GCC diagnostic ignored \"-Wunused-function\"") \
+    _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
+    _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
 
 #define ALIMER_ENABLE_WARNINGS() _Pragma("GCC diagnostic pop")
 #elif defined(_MSC_VER)

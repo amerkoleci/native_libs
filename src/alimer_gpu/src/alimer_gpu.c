@@ -2,6 +2,7 @@
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 #include "alimer_gpu_internal.h"
+#include <stdlib.h> 
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -106,7 +107,9 @@ void GPU_Shutdown(void)
 GPUSurface GPU_CreateSurface(void* windowHandle)
 {
     GPUSurfaceImpl* surface = (GPUSurfaceImpl*)malloc(sizeof(GPUSurfaceImpl));
+    ALIMER_ASSERT(surface);
     memset(surface, 0, sizeof(GPUSurfaceImpl));
+    surface->windowHandle = windowHandle;
 
     for (uint32_t i = 0; i < ALIMER_ARRAYSIZE(drivers); ++i)
     {

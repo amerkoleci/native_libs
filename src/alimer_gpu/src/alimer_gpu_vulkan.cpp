@@ -64,7 +64,23 @@ ALIMER_ENABLE_WARNINGS()
     X(vkCreateAndroidSurfaceKHR)
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
 #define GPU_FOREACH_INSTANCE_PLATFORM(X)\
-    X(vkCreateWin32SurfaceKHR)
+    X(vkCreateWin32SurfaceKHR)\
+    X(vkGetPhysicalDeviceWin32PresentationSupportKHR)
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+#define GPU_FOREACH_INSTANCE_PLATFORM(X)\
+    X(vkCreateMetalSurfaceEXT)
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#define GPU_FOREACH_INSTANCE_PLATFORM(X)\
+    X(vkCreateXcbSurfaceKHR)\
+    X(vkGetPhysicalDeviceXcbPresentationSupportKHR)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+#define GPU_FOREACH_INSTANCE_PLATFORM(X)\
+    X(vkCreateXlibSurfaceKHR)\
+    X(vkGetPhysicalDeviceXlibPresentationSupportKHR)
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#define GPU_FOREACH_INSTANCE_PLATFORM(X)\
+    X(vkCreateWaylandSurfaceKHR)\
+    X(vkGetPhysicalDeviceWaylandPresentationSupportKHR)
 #endif
 
 // Functions that require a device
@@ -508,7 +524,7 @@ static bool Vulkan_Init(const GPUConfig* config)
 #elif defined(VK_USE_PLATFORM_HEADLESS_EXT)
         instanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
 #else
-#   pragma error Platform not supported
+#       pragma error Platform not supported
 #endif
 
         if (config->validationMode != GPUValidationMode_Disabled)
@@ -673,36 +689,36 @@ static bool Vulkan_InitSurface(GPUSurface surface)
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
     VkMetalSurfaceCreateInfoEXT surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
-    surfaceCreateInfo.pLayer = (const CAMetalLayer*)window;
+    surfaceCreateInfo.pLayer = (const CAMetalLayer*)surface->windowHandle;
 
-    result = vkCreateMetalSurfaceEXT(instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
+    result = vkCreateMetalSurfaceEXT(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.connection = xlibXcb.GetXCBConnection(static_cast<Display*>(surface->GetXDisplay()));
-    surfaceCreateInfo.window = (xcb_window_t)window;
+    //surfaceCreateInfo.connection = xlibXcb.GetXCBConnection(static_cast<Display*>(surface->GetXDisplay()));
+    surfaceCreateInfo.window = (xcb_window_t)surface->windowHandle;
 
     result = vkCreateXcbSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.dpy = static_cast<Display*>(surface->GetXDisplay());
-    surfaceCreateInfo.window = surface->GetXWindow();
+    //surfaceCreateInfo.dpy = static_cast<Display*>(surface->GetXDisplay());
+    surfaceCreateInfo.window = surface->windowHandle;
 
-    result = vkCreateXlibSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
+    result = vkCreateXlibSurfaceKHR(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.display = display;
-    surfaceCreateInfo.surface = windowHandle;
+    //surfaceCreateInfo.display = display;
+    surfaceCreateInfo.surface = surface->windowHandle;
 
-    result = vkCreateWaylandSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
+    result = vkCreateWaylandSurfaceKHR(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
 #elif defined(VK_USE_PLATFORM_HEADLESS_EXT)
     VkHeadlessSurfaceCreateInfoEXT surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_HEADLESS_SURFACE_CREATE_INFO_EXT;
 
-    result = vkCreateHeadlessSurfaceEXT(instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
+    result = vkCreateHeadlessSurfaceEXT(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #endif
 
     if (result != VK_SUCCESS)
