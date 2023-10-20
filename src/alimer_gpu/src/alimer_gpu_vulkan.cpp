@@ -698,7 +698,7 @@ static bool Vulkan_InitSurface(GPUSurface surface)
     //surfaceCreateInfo.connection = xlibXcb.GetXCBConnection(static_cast<Display*>(surface->GetXDisplay()));
     surfaceCreateInfo.window = (xcb_window_t)surface->windowHandle;
 
-    result = vkCreateXcbSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
+    result = vkCreateXcbSurfaceKHR(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;

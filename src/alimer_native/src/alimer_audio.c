@@ -208,7 +208,12 @@ void Alimer_SoundSetLooping(AlimerSound sound, Bool32 value)
 void Alimer_SoundGetLoopPcmFrames(AlimerSound sound, uint64_t* pLoopBegInFrames, uint64_t* pLoopEndInFrames)
 {
     ma_data_source* source = ma_sound_get_data_source((ma_sound*)sound);
-    ma_data_source_get_loop_point_in_pcm_frames(source, pLoopBegInFrames, pLoopEndInFrames);
+    ma_uint64 loopBegInFrames, loopEndInFrames;
+    ma_data_source_get_loop_point_in_pcm_frames(source, &loopBegInFrames, &loopEndInFrames);
+    if (pLoopBegInFrames)
+        *pLoopBegInFrames = (uint64_t)loopBegInFrames;
+    if (pLoopEndInFrames)
+        *pLoopEndInFrames = (uint64_t)loopEndInFrames;
 }
 
 Bool32 Alimer_SoundSetLoopPcmFrames(AlimerSound sound, uint64_t loopBegInFrames, uint64_t loopEndInFrames)
