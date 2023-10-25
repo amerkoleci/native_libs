@@ -90,7 +90,14 @@ typedef uint64_t VkSurfaceKHR;
 
 typedef struct GPUSurfaceImpl
 {
-    uintptr_t windowHandle;
+    GPUSurfaceType type;
+    struct {
+        void* hinstance;
+        void* hwnd;
+    } win32;
+    struct {
+        void* metalLayer;
+    } apple;
     struct {
         VkSurfaceKHR handle;
     } vk;

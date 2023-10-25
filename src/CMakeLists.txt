@@ -24,6 +24,10 @@ add_subdirectory(spirv-cross)
 # vma
 add_subdirectory(vma)
 
+if (WIN32 OR WINDOWS_STORE)
+    add_subdirectory(D3D12MemoryAllocator)
+endif ()
+
 # GLFW
 if(NOT (ANDROID OR EMSCRIPTEN OR WINDOWS_STORE))
     set(GLFW_BUILD_DOCS OFF CACHE BOOL "")
@@ -45,3 +49,5 @@ if(NOT (ANDROID OR EMSCRIPTEN OR WINDOWS_STORE))
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif ()
+
+

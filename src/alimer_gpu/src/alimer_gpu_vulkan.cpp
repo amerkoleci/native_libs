@@ -682,14 +682,14 @@ static bool Vulkan_InitSurface(GPUSurface surface)
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
-    surfaceCreateInfo.hwnd = (HWND)surface->windowHandle;
+    surfaceCreateInfo.hinstance = (HINSTANCE)surface->win32.hinstance;
+    surfaceCreateInfo.hwnd = (HWND)surface->win32.hwnd;
 
     result = vkCreateWin32SurfaceKHR(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
     VkMetalSurfaceCreateInfoEXT surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
-    surfaceCreateInfo.pLayer = (const CAMetalLayer*)surface->windowHandle;
+    surfaceCreateInfo.pLayer = (const CAMetalLayer*)surface->apple.metalLayer;
 
     result = vkCreateMetalSurfaceEXT(state.instance, &surfaceCreateInfo, nullptr, &surface->vk.handle);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)

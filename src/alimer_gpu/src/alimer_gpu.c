@@ -104,12 +104,8 @@ void GPU_Shutdown(void)
     }
 }
 
-GPUSurface GPU_CreateSurface(uintptr_t windowHandle)
+void GPU_InitSurface(GPUSurface surface)
 {
-    GPUSurfaceImpl* surface = (GPUSurfaceImpl*)malloc(sizeof(GPUSurfaceImpl));
-    ALIMER_ASSERT(surface);
-    memset(surface, 0, sizeof(GPUSurfaceImpl));
-    surface->windowHandle = windowHandle;
 
     for (uint32_t i = 0; i < ALIMER_ARRAYSIZE(drivers); ++i)
     {
@@ -121,6 +117,33 @@ GPUSurface GPU_CreateSurface(uintptr_t windowHandle)
             drivers[i]->InitSurface(surface);
         }
     }
+}
+
+GPUSurface GPU_CreateWin32Surface(void* hinstance, void* hwnd)
+{
+    GPUSurfaceImpl* surface = (GPUSurfaceImpl*)malloc(sizeof(GPUSurfaceImpl));
+    ALIMER_ASSERT(surface);
+    memset(surface, 0, sizeof(GPUSurfaceImpl));
+
+    surface->type = GPUSurfaceType_WindowsHWND;
+    surface->win32.hinstance = hinstance;
+    surface->win32.hwnd = hwnd;
+
+    GPU_InitSurface(surface);
+
+    return surface;
+}
+
+GPUSurface GPU_CreateMetalSurface(void* metalLayer)
+{
+    GPUSurfaceImpl* surface = (GPUSurfaceImpl*)malloc(sizeof(GPUSurfaceImpl));
+    ALIMER_ASSERT(surface);
+    memset(surface, 0, sizeof(GPUSurfaceImpl));
+
+    surface->type = GPUSurfaceType_MetalLayer;
+    surface->apple.metalLayer = metalLayer;
+
+    GPU_InitSurface(surface);
 
     return surface;
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
 #include "alimer_internal.h"
+#include <stdio.h>
 
 ALIMER_DISABLE_WARNINGS()
 #define STBI_NO_STDIO
@@ -11,8 +12,10 @@ ALIMER_DISABLE_WARNINGS()
 
 #define STBI_WRITE_NO_STDIO
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stdio.h>
 #include "third_party/stb_image_write.h"
+
+//#define TINYEXR_IMPLEMENTATION
+//#include "third_party/tinyexr.h"
 
 #define QOI_NO_STDIO
 #define QOI_IMPLEMENTATION

@@ -88,6 +88,18 @@ typedef enum GPUCommandQueue {
     _GPUCommandQueue_Force32 = 0x7FFFFFFF
 } GPUCommandQueue;
 
+typedef enum GPUSurfaceType {
+    GPUSurfaceType_AndroidWindow,
+    GPUSurfaceType_MetalLayer,
+    GPUSurfaceType_WaylandSurface,
+    GPUSurfaceType_WindowsHWND,
+    GPUSurfaceType_WindowsCoreWindow,
+    GPUSurfaceType_WindowsSwapChainPanel,
+    GPUSurfaceType_XlibWindow,
+
+    _GPUSurfaceType_Force32 = 0x7FFFFFFF
+} GPUSurfaceType;
+
 /* Structs */
 typedef struct GPUViewport {
     float x;
@@ -135,6 +147,7 @@ ALIMER_GPU_API void GPU_GetVersion(int* major, int* minor, int* patch);
 ALIMER_GPU_API GPUBool32 GPU_Init(const GPUConfig* config);
 ALIMER_GPU_API void GPU_Shutdown(void);
 
-ALIMER_GPU_API GPUSurface GPU_CreateSurface(uintptr_t windowHandle);
+ALIMER_GPU_API GPUSurface GPU_CreateWin32Surface(void* hinstance, void* hwnd);
+ALIMER_GPU_API GPUSurface GPU_CreateMetalSurface(void* metalLayer);
 
 #endif /* ALIMER_GPU_H */
