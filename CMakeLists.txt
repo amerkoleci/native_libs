@@ -162,7 +162,6 @@ endif ()
 
 # Options
 option(LIB_INSTALL "Generate the install target" ${LIB_MASTER_PROJECT})
-option(LIB_SAMPLES "Build samples" ${LIB_MASTER_PROJECT})
 
 option(ALIMER_VULKAN "Make Vulkan backend available" ON)
 option(ALIMER_WEBGPU "Make WebGPU backend available" ON)
@@ -197,17 +196,12 @@ if(ALIMER_D3D12)
 endif()
 
 
-message(STATUS "  Samples         ${LIB_SAMPLES}")
-
 if(UNIX AND NOT APPLE)
     message(STATUS "      - WSI:         ${UNIX_WSI_SELECTION}")
 endif()
 
 # src
 add_subdirectory(src)
-
-# samples
-add_subdirectory(samples)
 
 # Install README.md and license
 if (LIB_INSTALL)

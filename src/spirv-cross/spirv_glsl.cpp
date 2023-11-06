@@ -553,7 +553,7 @@ void CompilerGLSL::find_static_extensions()
 			SPIRV_CROSS_THROW("GL_EXT_buffer_reference requires ESSL 320.");
 		else if (!options.es && options.version < 450)
 			SPIRV_CROSS_THROW("GL_EXT_buffer_reference requires GLSL 450.");
-		require_extension_internal("GL_EXT_buffer_reference");
+		require_extension_internal("GL_EXT_buffer_reference2");
 	}
 	else if (ir.addressing_model != AddressingModelLogical)
 	{
@@ -1295,7 +1295,10 @@ string CompilerGLSL::to_interpolation_qualifiers(const Bitset &flags)
 	if (flags.get(DecorationInvariant) && (options.es || options.version >= 120))
 		res += "invariant ";
 	if (flags.get(DecorationPerPrimitiveEXT))
-	    res += "perprimitiveEXT ";
+	{
+		res += "perprimitiveEXT ";
+		require_extension_internal("GL_EXT_mesh_shader");
+	}
 
 	if (flags.get(DecorationExplicitInterpAMD))
 	{
@@ -1486,6 +1489,10 @@ const char *CompilerGLSL::format_to_glsl(spv::ImageFormat format)
 		return "rg8i";
 	case ImageFormatR16i:
 		return "r16i";
+	case ImageFormatR64i:
+		return "r64i";
+	case ImageFormatR64ui:
+		return "r64ui";
 	default:
 	case ImageFormatUnknown:
 		return nullptr;
@@ -2458,6 +2465,10 @@ void CompilerGLSL::emit_buffer_block_native(const SPIRVariable &var)
 		i++;
 	}
 
+	// Don't declare empty blocks in GLSL, this is not allowed.
+	if (type_is_empty(type) && !backend.supports_empty_struct)
+		statement("int empty_struct_member;");
+
 	// var.self can be used as a backup name for the block name,
 	// so we need to make sure we don't disturb the name here on a recompile.
 	// It will need to be reset if we have to recompile.
@@ -2796,6 +2807,9 @@ string CompilerGLSL::constant_value_macro_name(uint32_t id)
 void CompilerGLSL::emit_specialization_constant_op(const SPIRConstantOp &constant)
 {
 	auto &type = get<SPIRType>(constant.basetype);
+	// This will break. It is bogus and should not be legal.
+	if (type_is_top_level_block(type))
+		return;
 	add_resource_name(constant.self);
 	auto name = to_name(constant.self);
 	statement("const ", variable_decl(type, name), " = ", constant_op_expression(constant), ";");
@@ -2824,6 +2838,10 @@ int CompilerGLSL::get_constant_mapping_to_workgroup_component(const SPIRConstant
 void CompilerGLSL::emit_constant(const SPIRConstant &constant)
 {
 	auto &type = get<SPIRType>(constant.constant_type);
+
+	// This will break. It is bogus and should not be legal.
+	if (type_is_top_level_block(type))
+		return;
 
 	SpecializationConstant wg_x, wg_y, wg_z;
 	ID workgroup_size_id = get_work_group_size_specialization_constants(wg_x, wg_y, wg_z);
@@ -3155,6 +3173,10 @@ bool CompilerGLSL::should_force_emit_builtin_block(StorageClass storage)
 		should_force = true;
 	}
 
+	// Either glslang bug or oversight, but global invariant position does not work in mesh shaders.
+	if (get_execution_model() == ExecutionModelMeshEXT && position_invariant)
+		should_force = true;
+
 	return should_force;
 }
 
@@ -3295,11 +3317,13 @@ void CompilerGLSL::emit_declared_builtin_block(StorageClass storage, ExecutionMo
 			auto &m = ir.meta[var.self].decoration;
 			if (m.builtin && builtin_is_per_vertex_set(m.builtin_type))
 			{
+				// For mesh/tesc output, Clip/Cull is an array-of-array. Look at innermost array type
+				// for correct result.
 				global_builtins.set(m.builtin_type);
 				if (m.builtin_type == BuiltInCullDistance)
-					cull_distance_size = to_array_size_literal(type);
+					cull_distance_size = to_array_size_literal(type, 0);
 				else if (m.builtin_type == BuiltInClipDistance)
-					clip_distance_size = to_array_size_literal(type);
+					clip_distance_size = to_array_size_literal(type, 0);
 
 				if (is_block_builtin(m.builtin_type) && m.decoration_flags.get(DecorationXfbStride) &&
 				    m.decoration_flags.get(DecorationXfbBuffer) && m.decoration_flags.get(DecorationOffset))
@@ -3403,6 +3427,8 @@ void CompilerGLSL::emit_declared_builtin_block(StorageClass storage, ExecutionMo
 		auto itr = builtin_xfb_offsets.find(BuiltInPosition);
 		if (itr != end(builtin_xfb_offsets))
 			statement("layout(xfb_offset = ", itr->second, ") vec4 gl_Position;");
+		else if (position_invariant)
+			statement("invariant vec4 gl_Position;");
 		else
 			statement("vec4 gl_Position;");
 	}
@@ -3499,6 +3525,8 @@ void CompilerGLSL::emit_resources()
 		break;
 	}
 
+	bool global_invariant_position = position_invariant && (options.es || options.version >= 120);
+
 	// Emit custom gl_PerVertex for SSO compatibility.
 	if (options.separate_shader_objects && !options.es && execution.model != ExecutionModelFragment)
 	{
@@ -3509,11 +3537,13 @@ void CompilerGLSL::emit_resources()
 		case ExecutionModelTessellationEvaluation:
 			emit_declared_builtin_block(StorageClassInput, execution.model);
 			emit_declared_builtin_block(StorageClassOutput, execution.model);
+			global_invariant_position = false;
 			break;
 
 		case ExecutionModelVertex:
 		case ExecutionModelMeshEXT:
 			emit_declared_builtin_block(StorageClassOutput, execution.model);
+			global_invariant_position = false;
 			break;
 
 		default:
@@ -3523,6 +3553,7 @@ void CompilerGLSL::emit_resources()
 	else if (should_force_emit_builtin_block(StorageClassOutput))
 	{
 		emit_declared_builtin_block(StorageClassOutput, execution.model);
+		global_invariant_position = false;
 	}
 	else if (execution.geometry_passthrough)
 	{
@@ -3543,7 +3574,7 @@ void CompilerGLSL::emit_resources()
 			statement("");
 	}
 
-	if (position_invariant && (options.es || options.version >= 120))
+	if (global_invariant_position)
 	{
 		statement("invariant gl_Position;");
 		statement("");
@@ -3560,6 +3591,10 @@ void CompilerGLSL::emit_resources()
 		for (auto &id_ : ir.ids_for_constant_undef_or_type)
 		{
 			auto &id = ir.ids[id_];
+
+			// Skip declaring any bogus constants or undefs which use block types.
+			// We don't declare block types directly, so this will never work.
+			// Should not be legal SPIR-V, so this is considered a workaround.
 
 			if (id.get_type() == TypeConstant)
 			{
@@ -3616,6 +3651,10 @@ void CompilerGLSL::emit_resources()
 				auto &type = this->get<SPIRType>(undef.basetype);
 				// OpUndef can be void for some reason ...
 				if (type.basetype == SPIRType::Void)
+					return;
+
+				// This will break. It is bogus and should not be legal.
+				if (type_is_top_level_block(type))
 					return;
 
 				string initializer;
@@ -10051,8 +10090,14 @@ string CompilerGLSL::access_chain_internal(uint32_t base, const uint32_t *indice
 
 				switch (builtin)
 				{
-				// case BuiltInCullDistance: // These are already arrays, need to figure out rules for these in tess/geom.
-				// case BuiltInClipDistance:
+				case BuiltInCullDistance:
+				case BuiltInClipDistance:
+					if (type->array.size() == 1) // Red herring. Only consider block IO for two-dimensional arrays here.
+					{
+						append_index(index, is_literal);
+						break;
+					}
+					// fallthrough
 				case BuiltInPosition:
 				case BuiltInPointSize:
 					if (mesh_shader)
@@ -10113,10 +10158,11 @@ string CompilerGLSL::access_chain_internal(uint32_t base, const uint32_t *indice
 				if (!pending_array_enclose)
 					expr += "]";
 			}
-			// Some builtins are arrays in SPIR-V but not in other languages, e.g. gl_SampleMask[] is an array in SPIR-V but not in Metal.
-			// By throwing away the index, we imply the index was 0, which it must be for gl_SampleMask.
-			else if (!builtin_translates_to_nonarray(BuiltIn(get_decoration(base, DecorationBuiltIn))))
+			else if (index_is_literal || !builtin_translates_to_nonarray(BuiltIn(get_decoration(base, DecorationBuiltIn))))
 			{
+				// Some builtins are arrays in SPIR-V but not in other languages, e.g. gl_SampleMask[] is an array in SPIR-V but not in Metal.
+				// By throwing away the index, we imply the index was 0, which it must be for gl_SampleMask.
+				// For literal indices we are working on composites, so we ignore this since we have already converted to proper array.
 				append_index(index, is_literal);
 			}
 
@@ -15345,6 +15391,14 @@ string CompilerGLSL::image_type_glsl(const SPIRType &type, uint32_t id)
 
 	switch (imagetype.basetype)
 	{
+	case SPIRType::Int64:
+		res = "i64";
+		require_extension_internal("GL_EXT_shader_image_int64");
+		break;
+	case SPIRType::UInt64:
+		res = "u64";
+		require_extension_internal("GL_EXT_shader_image_int64");
+		break;
 	case SPIRType::Int:
 	case SPIRType::Short:
 	case SPIRType::SByte:
@@ -17684,6 +17738,25 @@ void CompilerGLSL::cast_from_variable_load(uint32_t source_id, std::string &expr
 		expr = bitcast_expression(expr_type, expected_type, expr);
 }
 
+SPIRType::BaseType CompilerGLSL::get_builtin_basetype(BuiltIn builtin, SPIRType::BaseType default_type)
+{
+	// TODO: Fill in for more builtins.
+	switch (builtin)
+	{
+	case BuiltInLayer:
+	case BuiltInPrimitiveId:
+	case BuiltInViewportIndex:
+	case BuiltInFragStencilRefEXT:
+	case BuiltInSampleMask:
+	case BuiltInPrimitiveShadingRateKHR:
+	case BuiltInShadingRateKHR:
+		return SPIRType::Int;
+
+	default:
+		return default_type;
+	}
+}
+
 void CompilerGLSL::cast_to_variable_store(uint32_t target_id, std::string &expr, const SPIRType &expr_type)
 {
 	auto *var = maybe_get_backing_variable(target_id);
@@ -17695,24 +17768,7 @@ void CompilerGLSL::cast_to_variable_store(uint32_t target_id, std::string &expr,
 		return;
 
 	auto builtin = static_cast<BuiltIn>(get_decoration(target_id, DecorationBuiltIn));
-	auto expected_type = expr_type.basetype;
-
-	// TODO: Fill in for more builtins.
-	switch (builtin)
-	{
-	case BuiltInLayer:
-	case BuiltInPrimitiveId:
-	case BuiltInViewportIndex:
-	case BuiltInFragStencilRefEXT:
-	case BuiltInSampleMask:
-	case BuiltInPrimitiveShadingRateKHR:
-	case BuiltInShadingRateKHR:
-		expected_type = SPIRType::Int;
-		break;
-
-	default:
-		break;
-	}
+	auto expected_type = get_builtin_basetype(builtin, expr_type.basetype);
 
 	if (expected_type != expr_type.basetype)
 	{

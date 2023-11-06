@@ -16,6 +16,10 @@ if (BUILD_SHARED_LIBS)
     target_compile_definitions(${TARGET_NAME} PRIVATE SPV_EXPORT_SYMBOLS)
 endif ()
 
+if (WIN32)
+	set_target_properties(${TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif ()
+
 if (LIB_INSTALL)
     install (FILES "spirv_reflect.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${TARGET_NAME})
 
