@@ -121,6 +121,69 @@ EXPORT void Allocator_CalculateStatistics(Allocator* allocator, TotalStatistics*
     allocator->CalculateStatistics(pStats);
 }
 
+/* Allocation */
+EXPORT ULONG Allocation_AddRef(Allocation* _this)
+{
+    return _this->AddRef();
+}
+
+EXPORT ULONG Allocation_Release(Allocation* _this)
+{
+    return _this->Release();
+}
+
+EXPORT uint64_t Allocation_GetOffset(Allocation* _this)
+{
+    return _this->GetOffset();
+}
+
+EXPORT uint64_t Allocation_GetAlignment(Allocation* _this)
+{
+    return _this->GetAlignment();
+}
+
+EXPORT uint64_t Allocation_GetSize(Allocation* _this)
+{
+    return _this->GetSize();
+}
+
+EXPORT ID3D12Resource* Allocation_GetResource(Allocation* _this)
+{
+    return _this->GetResource();
+}
+
+EXPORT void Allocation_SetResource(Allocation* _this, ID3D12Resource* resource)
+{
+    _this->SetResource(resource);
+}
+
+EXPORT ID3D12Heap* Allocation_GetHeap(Allocation* _this)
+{
+    return _this->GetHeap();
+}
+
+EXPORT void* Allocation_GetPrivateData(Allocation* _this)
+{
+    return _this->GetPrivateData();
+}
+
+EXPORT void Allocation_SetPrivateData(Allocation* _this, void* pPrivateData)
+{
+    _this->SetPrivateData(pPrivateData);
+}
+
+// TODO: Add GetName
+
+EXPORT void Allocation_SetName(Allocation* _this, const wchar_t* name)
+{
+    return _this->SetName(name);
+}
+
+EXPORT BOOL Allocation_WasZeroInitialized(Allocation* _this)
+{
+    return _this->WasZeroInitialized();
+}
+
 /* Pool */
 EXPORT ULONG Pool_AddRef(Pool* pool)
 {
