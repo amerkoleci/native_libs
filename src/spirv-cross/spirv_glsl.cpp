@@ -5936,7 +5936,7 @@ string CompilerGLSL::convert_half_to_string(const SPIRConstant &c, uint32_t col,
 		type.basetype = SPIRType::Half;
 		type.vecsize = 1;
 		type.columns = 1;
-		res = join(type_to_glsl(type), "(", convert_to_string(float_value, current_locale_radix_character), ")");
+		res = join(type_to_glsl(type), "(", format_float(float_value), ")");
 	}
 
 	return res;
@@ -6004,7 +6004,7 @@ string CompilerGLSL::convert_float_to_string(const SPIRConstant &c, uint32_t col
 	}
 	else
 	{
-		res = convert_to_string(float_value, current_locale_radix_character);
+		res = format_float(float_value);
 		if (backend.float_literal_suffix)
 			res += "f";
 	}
@@ -6087,7 +6087,7 @@ std::string CompilerGLSL::convert_double_to_string(const SPIRConstant &c, uint32
 	}
 	else
 	{
-		res = convert_to_string(double_value, current_locale_radix_character);
+		res = format_double(double_value);
 		if (backend.double_literal_suffix)
 			res += "lf";
 	}
@@ -15051,7 +15051,12 @@ string CompilerGLSL::flags_to_qualifiers_glsl(const SPIRType &type, const Bitset
 	{
 		auto &execution = get_entry_point();
 
-		if (flags.get(DecorationRelaxedPrecision))
+		if (type.basetype == SPIRType::UInt && is_legacy_es())
+		{
+			// HACK: This is a bool. See comment in type_to_glsl().
+			qual += "lowp ";
+		}
+		else if (flags.get(DecorationRelaxedPrecision))
 		{
 			bool implied_fmediump = type.basetype == SPIRType::Float &&
 			                        options.fragment.default_float_precision == Options::Mediump &&
@@ -15585,7 +15590,11 @@ string CompilerGLSL::type_to_glsl(const SPIRType &type, uint32_t id)
 	if (type.basetype == SPIRType::UInt && is_legacy())
 	{
 		if (options.es)
-			SPIRV_CROSS_THROW("Unsigned integers are not supported on legacy ESSL.");
+			// HACK: spirv-cross changes bools into uints and generates code which compares them to
+			// zero. Input code will have already been validated as not to have contained any uints,
+			// so any remaining uints must in fact be bools. However, simply returning "bool" here
+			// will result in invalid code. Instead, return an int.
+			return backend.basic_int_type;
 		else
 			require_extension_internal("GL_EXT_gpu_shader4");
 	}
@@ -18634,3 +18643,22 @@ uint32_t CompilerGLSL::type_to_location_count(const SPIRType &type) const
 
 	return count;
 }
+
+std::string CompilerGLSL::format_float(float value) const
+{
+	if (float_formatter)
+		return float_formatter->format_float(value);
+
+	// default behavior
+	return convert_to_string(value, current_locale_radix_character);
+}
+
+std::string CompilerGLSL::format_double(double value) const
+{
+	if (float_formatter)
+		return float_formatter->format_double(value);
+
+	// default behavior
+	return convert_to_string(value, current_locale_radix_character);
+}
+
