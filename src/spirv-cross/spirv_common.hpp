@@ -548,6 +548,9 @@ struct SPIRType : IVariant
 		type = TypeType
 	};
 
+	spv::Op op = spv::Op::OpNop;
+	explicit SPIRType(spv::Op op_) : op(op_) {}
+
 	enum BaseType
 	{
 		Unknown,
@@ -618,7 +621,7 @@ struct SPIRType : IVariant
 		uint32_t sampled;
 		spv::ImageFormat format;
 		spv::AccessQualifier access;
-	} image;
+	} image = {};
 
 	// Structs can be declared multiple times if they are used as part of interface blocks.
 	// We want to detect this so that we only emit the struct definition once.
@@ -1693,6 +1696,7 @@ struct Meta
 		uint32_t index = 0;
 		spv::FPRoundingMode fp_rounding_mode = spv::FPRoundingModeMax;
 		bool builtin = false;
+		bool qualified_alias_explicit_override = false;
 
 		struct Extended
 		{

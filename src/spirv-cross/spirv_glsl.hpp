@@ -438,7 +438,7 @@ protected:
 	virtual void emit_struct_member(const SPIRType &type, uint32_t member_type_id, uint32_t index,
 	                                const std::string &qualifier = "", uint32_t base_offset = 0);
 	virtual void emit_struct_padding_target(const SPIRType &type);
-	virtual std::string image_type_glsl(const SPIRType &type, uint32_t id = 0);
+	virtual std::string image_type_glsl(const SPIRType &type, uint32_t id = 0, bool member = false);
 	std::string constant_expression(const SPIRConstant &c,
 	                                bool inside_block_like_struct_scope = false,
 	                                bool inside_struct_scope = false);
@@ -757,7 +757,7 @@ protected:
 	virtual bool access_chain_needs_stage_io_builtin_translation(uint32_t base);
 
 	virtual void check_physical_type_cast(std::string &expr, const SPIRType *type, uint32_t physical_type);
-	virtual void prepare_access_chain_for_scalar_access(std::string &expr, const SPIRType &type,
+	virtual bool prepare_access_chain_for_scalar_access(std::string &expr, const SPIRType &type,
 	                                                    spv::StorageClass storage, bool &is_packed);
 
 	std::string access_chain(uint32_t base, const uint32_t *indices, uint32_t count, const SPIRType &target_type,
