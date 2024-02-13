@@ -42,7 +42,7 @@ jobs:
         mkdir bin/win-arm64
         mv win-x64-sdk\bin\*.dll bin/win-x64
         mv win-arm64-sdk\bin\*.dll bin/win-arm64
-    - uses: actions/upload-artifact@v5
+    - uses: actions/upload-artifact@v4
       with:
         name: libs_windows
         path: bin
