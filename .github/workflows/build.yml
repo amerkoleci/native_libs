@@ -42,7 +42,7 @@ jobs:
         mkdir bin/win-arm64
         mv win-x64-sdk\bin\*.dll bin/win-x64
         mv win-arm64-sdk\bin\*.dll bin/win-arm64
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v5
       with:
         name: libs_windows
         path: bin
@@ -69,7 +69,7 @@ jobs:
       run: |
         mkdir -p bin/linux-x64
         mv linux-x64-sdk/lib/*.so bin/linux-x64
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: libs_linux
         path: bin
@@ -98,7 +98,7 @@ jobs:
       run: |
         mkdir -p bin/osx
         mv osx-universal-sdk/lib/*.dylib bin/osx
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: libs_osx
         path: bin
@@ -129,7 +129,7 @@ jobs:
         with:
           files: native_libs.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: 'Build Artifacts'
           path: native_libs.7z
