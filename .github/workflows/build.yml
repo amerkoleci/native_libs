@@ -109,7 +109,7 @@ jobs:
     needs: [windows, linux, macos]
     steps:
       - name: download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Display structure of downloaded files
