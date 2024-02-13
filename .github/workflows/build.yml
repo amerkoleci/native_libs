@@ -75,7 +75,7 @@ jobs:
         path: bin
 
   macos:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v4
 
@@ -96,8 +96,8 @@ jobs:
 
     - name: Package macos
       run: |
-        mkdir -p bin/osx-universal
-        mv osx-universal-sdk/lib/*.dylib bin/osx-universal
+        mkdir -p bin/osx
+        mv osx-universal-sdk/lib/*.dylib bin/osx
     - uses: actions/upload-artifact@v3
       with:
         name: libs_osx
