@@ -179,11 +179,6 @@ EXPORT void Allocation_SetName(Allocation* _this, const wchar_t* name)
     return _this->SetName(name);
 }
 
-EXPORT BOOL Allocation_WasZeroInitialized(Allocation* _this)
-{
-    return _this->WasZeroInitialized();
-}
-
 /* Pool */
 EXPORT ULONG Pool_AddRef(Pool* pool)
 {

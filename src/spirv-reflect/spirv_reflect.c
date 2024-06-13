@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #endif
 
-#if defined(__clang__) || defined(__GNUC__) || defined(__APPLE_CC__)
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 7) || defined(__APPLE_CC__)
 #define FALLTHROUGH __attribute__((fallthrough))
 #else
 #define FALLTHROUGH
@@ -529,8 +529,8 @@ static SpvReflectTypeDescription* FindType(SpvReflectShaderModule* p_module, uin
 }
 
 static SpvReflectPrvAccessChain* FindAccessChain(SpvReflectPrvParser* p_parser, uint32_t id) {
-  uint32_t ac_cnt = p_parser->access_chain_count;
-  for (uint32_t i = 0; i < ac_cnt; i++) {
+  const uint32_t ac_count = p_parser->access_chain_count;
+  for (uint32_t i = 0; i < ac_count; i++) {
     if (p_parser->access_chains[i].result_id == id) {
       return &p_parser->access_chains[i];
     }
@@ -538,8 +538,10 @@ static SpvReflectPrvAccessChain* FindAccessChain(SpvReflectPrvParser* p_parser, 
   return 0;
 }
 
-static uint32_t FindBaseId(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessChain* ac) {
-  uint32_t base_id = ac->base_id;
+// Access Chains mostly have their Base ID pointed directly to a OpVariable, but sometimes
+// it will be through a load and this funciton handles the edge cases how to find that
+static uint32_t FindAccessChainBaseVariable(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessChain* p_access_chain) {
+  uint32_t base_id = p_access_chain->base_id;
   SpvReflectPrvNode* base_node = FindNode(p_parser, base_id);
   // TODO - This is just a band-aid to fix crashes.
   // Need to understand why here and hopefully remove
@@ -555,6 +557,10 @@ static uint32_t FindBaseId(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessCha
       case SpvOpFunctionParameter: {
         UNCHECKED_READU32(p_parser, base_node->word_offset + 2, base_id);
       } break;
+      case SpvOpBitcast:
+        // This can be caused by something like GL_EXT_buffer_reference_uvec2 trying to load a pointer.
+        // We currently call from a push constant, so no way to have a reference loop back into the PC block
+        return 0;
       default: {
         assert(false);
       } break;
@@ -573,8 +579,8 @@ static uint32_t FindBaseId(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessCha
   return base_id;
 }
 
-static SpvReflectBlockVariable* GetRefBlkVar(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessChain* ac) {
-  uint32_t base_id = ac->base_id;
+static SpvReflectBlockVariable* GetRefBlkVar(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessChain* p_access_chain) {
+  uint32_t base_id = p_access_chain->base_id;
   SpvReflectPrvNode* base_node = FindNode(p_parser, base_id);
   assert(base_node->op == SpvOpLoad);
   UNCHECKED_READU32(p_parser, base_node->word_offset + 3, base_id);
@@ -2174,6 +2180,34 @@ static SpvReflectResult ParseDescriptorBindings(SpvReflectPrvParser* p_parser, S
     p_descriptor->decoration_flags = ApplyDecorations(&p_node->decorations);
     p_descriptor->user_type = p_node->decorations.user_type;
 
+    // Flags like non-writable and non-readable are found as member decorations only.
+    // If all members have one of those decorations set, promote the decoration up
+    // to the whole descriptor.
+    const SpvReflectPrvNode* p_type_node = FindNode(p_parser, p_type->id);
+    if (IsNotNull(p_type_node) && p_type_node->member_count) {
+      SpvReflectPrvDecorations common_flags = p_type_node->member_decorations[0];
+
+      for (uint32_t m = 1; m < p_type_node->member_count; ++m) {
+        common_flags.is_relaxed_precision &= p_type_node->member_decorations[m].is_relaxed_precision;
+        common_flags.is_block &= p_type_node->member_decorations[m].is_block;
+        common_flags.is_buffer_block &= p_type_node->member_decorations[m].is_buffer_block;
+        common_flags.is_row_major &= p_type_node->member_decorations[m].is_row_major;
+        common_flags.is_column_major &= p_type_node->member_decorations[m].is_column_major;
+        common_flags.is_built_in &= p_type_node->member_decorations[m].is_built_in;
+        common_flags.is_noperspective &= p_type_node->member_decorations[m].is_noperspective;
+        common_flags.is_flat &= p_type_node->member_decorations[m].is_flat;
+        common_flags.is_non_writable &= p_type_node->member_decorations[m].is_non_writable;
+        common_flags.is_non_readable &= p_type_node->member_decorations[m].is_non_readable;
+        common_flags.is_patch &= p_type_node->member_decorations[m].is_patch;
+        common_flags.is_per_vertex &= p_type_node->member_decorations[m].is_per_vertex;
+        common_flags.is_per_task &= p_type_node->member_decorations[m].is_per_task;
+        common_flags.is_weight_texture &= p_type_node->member_decorations[m].is_weight_texture;
+        common_flags.is_block_match_texture &= p_type_node->member_decorations[m].is_block_match_texture;
+      }
+
+      p_descriptor->decoration_flags |= ApplyDecorations(&common_flags);
+    }
+
     // If this is in the StorageBuffer storage class, it's for sure a storage
     // buffer descriptor. We need to handle this case earlier because in SPIR-V
     // there are two ways to indicate a storage buffer:
@@ -2677,10 +2711,35 @@ static SpvReflectResult ParseDescriptorBlockVariableSizes(SpvReflectPrvParser* p
     }
   }
 
+  // Structs can offset order don't need to match the index order, so first order by offset
+  // example:
+  //     OpMemberDecorate %struct 0 Offset 4
+  //     OpMemberDecorate %struct 1 Offset 0
+  SpvReflectBlockVariable** pp_member_offset_order =
+      (SpvReflectBlockVariable**)calloc(p_var->member_count, sizeof(SpvReflectBlockVariable*));
+  if (IsNull(pp_member_offset_order)) {
+    return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
+  }
+
+  uint32_t bottom_bound = 0;
+  for (uint32_t i = 0; i < p_var->member_count; ++i) {
+    uint32_t lowest_offset = UINT32_MAX;
+    uint32_t member_index = 0;
+    for (uint32_t j = 0; j < p_var->member_count; ++j) {
+      const uint32_t offset = p_var->members[j].offset;
+      if (offset < lowest_offset && offset >= bottom_bound) {
+        member_index = j;
+        lowest_offset = offset;
+      }
+    }
+    pp_member_offset_order[i] = &p_var->members[member_index];
+    bottom_bound = lowest_offset + 1;  // 2 index can't share the same offset
+  }
+
   // Parse padded size using offset difference for all member except for the last entry...
-  for (uint32_t member_index = 0; member_index < (p_var->member_count - 1); ++member_index) {
-    SpvReflectBlockVariable* p_member_var = &p_var->members[member_index];
-    SpvReflectBlockVariable* p_next_member_var = &p_var->members[member_index + 1];
+  for (uint32_t i = 0; i < (p_var->member_count - 1); ++i) {
+    SpvReflectBlockVariable* p_member_var = pp_member_offset_order[i];
+    SpvReflectBlockVariable* p_next_member_var = pp_member_offset_order[i + 1];
     p_member_var->padded_size = p_next_member_var->offset - p_member_var->offset;
     if (p_member_var->size > p_member_var->padded_size) {
       p_member_var->size = p_member_var->padded_size;
@@ -2689,18 +2748,21 @@ static SpvReflectResult ParseDescriptorBlockVariableSizes(SpvReflectPrvParser* p
       p_member_var->padded_size = p_member_var->size;
     }
   }
+
   // ...last entry just gets rounded up to near multiple of SPIRV_DATA_ALIGNMENT, which is 16 and
   // subtract the offset.
-  if (p_var->member_count > 0) {
-    SpvReflectBlockVariable* p_member_var = &p_var->members[p_var->member_count - 1];
-    p_member_var->padded_size = RoundUp(p_member_var->offset + p_member_var->size, SPIRV_DATA_ALIGNMENT) - p_member_var->offset;
-    if (p_member_var->size > p_member_var->padded_size) {
-      p_member_var->size = p_member_var->padded_size;
-    }
-    if (is_parent_rta) {
-      p_member_var->padded_size = p_member_var->size;
-    }
+  // last entry == entry with largest offset value
+  SpvReflectBlockVariable* p_last_member_var = pp_member_offset_order[p_var->member_count - 1];
+  p_last_member_var->padded_size =
+      RoundUp(p_last_member_var->offset + p_last_member_var->size, SPIRV_DATA_ALIGNMENT) - p_last_member_var->offset;
+  if (p_last_member_var->size > p_last_member_var->padded_size) {
+    p_last_member_var->size = p_last_member_var->padded_size;
   }
+  if (is_parent_rta) {
+    p_last_member_var->padded_size = p_last_member_var->size;
+  }
+
+  SafeFree(pp_member_offset_order);
 
   // If buffer ref, sizes are same as uint64_t
   if (is_parent_ref) {
@@ -2709,7 +2771,7 @@ static SpvReflectResult ParseDescriptorBlockVariableSizes(SpvReflectPrvParser* p
   }
 
   // @TODO validate this with assertion
-  p_var->size = p_var->members[p_var->member_count - 1].offset + p_var->members[p_var->member_count - 1].padded_size;
+  p_var->size = p_last_member_var->offset + p_last_member_var->padded_size;
   p_var->padded_size = p_var->size;
 
   return SPV_REFLECT_RESULT_SUCCESS;
@@ -3742,13 +3804,6 @@ static SpvReflectResult ParseExecutionModes(SpvReflectPrvParser* p_parser, SpvRe
           }
         } break;
 
-        case SpvExecutionModeInputPoints:
-        case SpvExecutionModeInputLines:
-        case SpvExecutionModeInputLinesAdjacency:
-        case SpvExecutionModeTriangles:
-        case SpvExecutionModeInputTrianglesAdjacency:
-        case SpvExecutionModeQuads:
-        case SpvExecutionModeIsolines:
         case SpvExecutionModeOutputVertices: {
           CHECKED_READU32(p_parser, p_node->word_offset + 3, p_entry_point->output_vertices);
         } break;
@@ -3867,7 +3922,7 @@ static SpvReflectResult ParsePushConstantBlocks(SpvReflectPrvParser* p_parser, S
     for (uint32_t access_chain_index = 0; access_chain_index < p_parser->access_chain_count; ++access_chain_index) {
       SpvReflectPrvAccessChain* p_access_chain = &(p_parser->access_chains[access_chain_index]);
       // Skip any access chains that aren't touching this push constant block
-      if (p_push_constant->spirv_id != FindBaseId(p_parser, p_access_chain)) {
+      if (p_push_constant->spirv_id != FindAccessChainBaseVariable(p_parser, p_access_chain)) {
         continue;
       }
       SpvReflectBlockVariable* p_var =
