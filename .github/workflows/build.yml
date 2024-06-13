@@ -82,13 +82,6 @@ jobs:
     - name: Get CMake
       uses: lukka/get-cmake@v3.29.4
 
-    - name: Setup dependencies
-      run: |
-        brew install \
-          ninja \
-          pkg-config \
-          llvm
-
     - name: CMake Configure osx-universal
       run: cmake -S . -B build_osx -G Ninja -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="osx-universal-sdk" -D"CMAKE_OSX_ARCHITECTURES=x86_64;arm64"
     - name: CMake Build osx-universal
@@ -133,7 +126,7 @@ jobs:
         with:
           name: 'Build Artifacts'
           path: native_libs.7z
-      - uses: geekyeggo/delete-artifact@v2
+      - uses: geekyeggo/delete-artifact@v5
         with:
           name: |
             libs_windows
