@@ -48,27 +48,73 @@ jobs:
         path: bin
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Get CMake
       uses: lukka/get-cmake@v3.29.4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install libsdl2-dev
-
-    - name: Configure linux-x64
+    # Linux
+    - name: CMake Configure linux-x64
       run: cmake -S . -B build_linux_64 -G Ninja -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="linux-x64-sdk"
-    - name: Build linux-x64
+    - name: CMake Build linux-x64
       run: cmake --build build_linux_64 --config Release --target install --verbose --parallel
 
-    - name: Package Linux
+    # Android
+    - name: Setup Android NDK
+      id: setup-ndk
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r25
+        add-to-path: false
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+    - name: CMake Configure (android-arm64-v8a)
+      run: >
+        cmake -S "." -B "build_android_arm64_v8a"
+        -DANDROID_ABI=arm64-v8a
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX="android-arm64_v8a-sdk"
+        -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
+        -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
+    - name: CMake Build (android-arm64-v8a)
+      run: cmake --build build_android_arm64_v8a --config Release --verbose --parallel
+
+    - name: CMake Configure (android-armeabi-v7a)
+      run: >
+        cmake -S "." -B "build_android_armeabi_v7a"
+        -DANDROID_ABI=armeabi-v7a
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX="android-armeabi_v7a-sdk"
+        -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
+        -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
+    - name: CMake Build (android-armeabi-v7a)
+      run: cmake --build build_android_armeabi_v7a --config Release --verbose --parallel
+
+    - name: CMake Configure (android-x86_64)
+      run: >
+        cmake -S "." -B "build_android_x86_64"
+        -DANDROID_ABI=x86_64
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX="android-x86_64-sdk"
+        -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
+        -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
+    - name: CMake Build (android-armeabi-v7a)
+      run: cmake --build build_android_x86_64 --config Release --verbose --parallel
+
+    # Linux and Android artifacts
+    - name: Package Linux and Android
       run: |
         mkdir -p bin/linux-x64
+        mkdir -p bin/android-arm64
+        mkdir -p bin/android-arm
+        mkdir -p bin/android-x64
         mv linux-x64-sdk/lib/*.so bin/linux-x64
+        mv android-arm64_v8a-sdk/lib/*.so bin/android-arm64
+        mv android-armeabi_v7a-sdk/lib/*.so bin/android-arm
+        mv android-x86_64-sdk/lib/*.so bin/android-x64
     - uses: actions/upload-artifact@v4
       with:
         name: libs_linux
