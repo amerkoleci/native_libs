@@ -165,12 +165,6 @@ endif ()
 # Options
 option(LIB_INSTALL "Generate the install target" ${LIB_MASTER_PROJECT})
 
-option(ALIMER_VULKAN "Make Vulkan backend available" ON)
-option(ALIMER_WEBGPU "Make WebGPU backend available" ON)
-if (WIN32 OR WINDOWS_STORE)
-	option(ALIMER_D3D12 "Make D3D12 backend available" ON)
-endif()
-
 cmake_dependent_option(USE_STATIC_MSVC_RUNTIME_LIBRARY "Use the static MSVC runtime library" ON "MSVC;NOT WINDOWS_STORE" OFF)
 
 # Set runtime library
