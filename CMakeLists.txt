@@ -152,6 +152,8 @@ elseif(WIN32)
 endif()
 
 # Options
+include(CMakeDependentOption)
+
 if (IOS OR EMSCRIPTEN)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Disable shared library on (IOS, WEB)" FORCE)
 elseif(ANDROID)
@@ -167,6 +169,13 @@ option(ALIMER_VULKAN "Make Vulkan backend available" ON)
 option(ALIMER_WEBGPU "Make WebGPU backend available" ON)
 if (WIN32 OR WINDOWS_STORE)
 	option(ALIMER_D3D12 "Make D3D12 backend available" ON)
+endif()
+
+cmake_dependent_option(USE_STATIC_MSVC_RUNTIME_LIBRARY "Use the static MSVC runtime library" ON "MSVC;NOT WINDOWS_STORE" OFF)
+
+# Set runtime library
+if (USE_STATIC_MSVC_RUNTIME_LIBRARY)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 # Print current build configuration
