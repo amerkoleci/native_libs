@@ -15,6 +15,14 @@
 #   pragma clang diagnostic ignored "-Wunused-variable"
 #   pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #   pragma clang diagnostic ignored "-Wnullability-completeness"
+#elif defined(__GNUC__) || defined(__GNUG__)
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wtautological-compare" // comparison of unsigned expression < 0 is always false
+#   pragma GCC diagnostic ignored "-Wunused-private-field"
+#   pragma GCC diagnostic ignored "-Wunused-parameter"
+#   pragma GCC diagnostic ignored "-Wunused-variable"
+#   pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#   pragma GCC diagnostic ignored "-Wnullability-completeness"
 #elif defined(_MSC_VER)
 #   pragma warning(push, 4)
 #   pragma warning(disable: 4127) // conditional expression is constant
@@ -32,6 +40,8 @@
 
 #if defined(__clang__)
 #   pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+#   pragma GCC diagnostic pop
 #elif defined(_MSC_VER)
 #   pragma warning(pop)
 #endif

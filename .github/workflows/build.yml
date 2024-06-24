@@ -80,7 +80,7 @@ jobs:
         -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
         -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
     - name: CMake Build (android-arm64-v8a)
-      run: cmake --build build_android_arm64_v8a --config Release --verbose --parallel
+      run: cmake --build build_android_arm64_v8a --config Release --target install --verbose --parallel
 
     - name: CMake Configure (android-armeabi-v7a)
       run: >
@@ -91,7 +91,7 @@ jobs:
         -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
         -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
     - name: CMake Build (android-armeabi-v7a)
-      run: cmake --build build_android_armeabi_v7a --config Release --verbose --parallel
+      run: cmake --build build_android_armeabi_v7a --config Release --target install --verbose --parallel
 
     - name: CMake Configure (android-x86_64)
       run: >
@@ -102,7 +102,7 @@ jobs:
         -DANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}
         -DCMAKE_TOOLCHAIN_FILE="${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake"
     - name: CMake Build (android-armeabi-v7a)
-      run: cmake --build build_android_x86_64 --config Release --verbose --parallel
+      run: cmake --build build_android_x86_64 --config Release --target install --verbose --parallel
 
     # Linux and Android artifacts
     - name: Package Linux and Android
