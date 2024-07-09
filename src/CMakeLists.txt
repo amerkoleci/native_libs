@@ -18,6 +18,9 @@ add_subdirectory(spirv-cross)
 # vma
 add_subdirectory(vma)
 
+# meshoptimizer
+add_subdirectory(meshoptimizer)
+
 if (WIN32 OR WINDOWS_STORE)
     add_subdirectory(D3D12MemoryAllocator)
 endif ()

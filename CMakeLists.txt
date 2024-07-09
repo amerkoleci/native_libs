@@ -85,7 +85,6 @@ elseif(WIN32)
     set(LIB_PLATFORM_NAME "Win32")
 elseif(UNIX)
     set(LIB_PLATFORM_NAME "Unix")
-    set(UNIX_WSI_SELECTION "XCB" CACHE STRING "Select WSI target (XCB, XLIB, WAYLAND, D2D)")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -189,19 +188,6 @@ if (BUILD_SHARED_LIBS)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
-
-if(ALIMER_VULKAN)
-    message(STATUS "  Vulkan          ON")
-endif()
-
-if(ALIMER_D3D12)
-    message(STATUS "  D3D12           ON")
-endif()
-
-
-if(UNIX AND NOT APPLE)
-    message(STATUS "      - WSI:         ${UNIX_WSI_SELECTION}")
-endif()
 
 # src
 add_subdirectory(src)
