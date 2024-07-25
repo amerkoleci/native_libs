@@ -152,6 +152,7 @@ endif()
 
 # Options
 include(CMakeDependentOption)
+include(cmake/CPM.cmake)
 
 if (IOS OR EMSCRIPTEN)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Disable shared library on (IOS, WEB)" FORCE)
@@ -162,8 +163,6 @@ else()
 endif ()
 
 # Options
-option(LIB_INSTALL "Generate the install target" ${LIB_MASTER_PROJECT})
-
 cmake_dependent_option(USE_STATIC_MSVC_RUNTIME_LIBRARY "Use the static MSVC runtime library" ON "MSVC;NOT WINDOWS_STORE" OFF)
 
 # Set runtime library
@@ -193,10 +192,8 @@ endif ()
 add_subdirectory(src)
 
 # Install README.md and license
-if (LIB_INSTALL)
-    install (FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/README.md
-        ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
-        DESTINATION .
-    )
-endif ()
+install (FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+    ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+    DESTINATION .
+)
