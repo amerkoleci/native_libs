@@ -41,11 +41,8 @@ endif ()
 CPMAddPackage(
     NAME ktx
     GITHUB_REPOSITORY KhronosGroup/KTX-Software
-    GIT_TAG main
-    GIT_SHALLOW ON
-    GIT_MODULES ""
+    GIT_TAG 3439dafa781fa792cd472399044944d2d91b86b1
     OPTIONS
-        "KTX_VERSION_FULL v4.3.2"
         "KTX_FEATURE_DOC OFF"
         "KTX_FEATURE_JNI OFF"
         "KTX_FEATURE_PY OFF"
