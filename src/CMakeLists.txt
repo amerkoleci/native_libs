@@ -41,7 +41,7 @@ endif ()
 CPMAddPackage(
     NAME ktx
     GITHUB_REPOSITORY KhronosGroup/KTX-Software
-    GIT_TAG 3439dafa781fa792cd472399044944d2d91b86b1
+    GIT_TAG 99c324fff754a4fc177b2a12b446fdfa8f6a7625
     OPTIONS
         "KTX_FEATURE_DOC OFF"
         "KTX_FEATURE_JNI OFF"
@@ -52,6 +52,16 @@ CPMAddPackage(
         "KTX_FEATURE_VK_UPLOAD OFF"
         "KTX_FEATURE_GL_UPLOAD OFF"
         "KTX_FEATURE_TOOLS OFF"
+)
+
+# box2d
+CPMAddPackage(
+    NAME box2d
+    GITHUB_REPOSITORY erincatto/box2d
+    GIT_TAG 87e13e44378afc42598a4f7e8b2d5289982cdda7
+    OPTIONS
+        "BOX2D_SANITIZE OFF"
+        "BOX2D_ENABLE_SIMD ON"
 )
 
 # glfw
