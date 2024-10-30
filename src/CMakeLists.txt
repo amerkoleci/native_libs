@@ -38,21 +38,7 @@ if (WIN32 OR WINDOWS_STORE)
 endif ()
 
 # ktx
-CPMAddPackage(
-    NAME ktx
-    GITHUB_REPOSITORY KhronosGroup/KTX-Software
-    GIT_TAG 99c324fff754a4fc177b2a12b446fdfa8f6a7625
-    OPTIONS
-        "KTX_FEATURE_DOC OFF"
-        "KTX_FEATURE_JNI OFF"
-        "KTX_FEATURE_PY OFF"
-        "KTX_FEATURE_TESTS OFF"
-        "KTX_FEATURE_TOOLS_CTS OFF"
-        "KTX_FEATURE_LOADTEST_APPS OFF"
-        "KTX_FEATURE_VK_UPLOAD OFF"
-        "KTX_FEATURE_GL_UPLOAD OFF"
-        "KTX_FEATURE_TOOLS OFF"
-)
+add_subdirectory(ktx)
 
 # box2d
 CPMAddPackage(
