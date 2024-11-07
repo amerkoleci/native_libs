@@ -34,6 +34,14 @@ add_subdirectory(vma)
 add_subdirectory(meshoptimizer)
 
 if (WIN32 OR WINDOWS_STORE)
+    CPMAddPackage(
+        NAME DirectX_Headers
+        GITHUB_REPOSITORY microsoft/DirectX-Headers
+        GIT_TAG main
+        DOWNLOAD_ONLY YES
+        GIT_SHALLOW ON
+    )
+
     add_subdirectory(D3D12MemoryAllocator)
 endif ()
 

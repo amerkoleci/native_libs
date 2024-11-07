@@ -1,15 +1,18 @@
 // Copyright (c) Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
+#ifndef D3D12MA_C_H_
+#define D3D12MA_C_H_
+
 #ifdef __cplusplus
-#   define D3D12MA_API extern "C" __declspec(dllexport)
+#   define D3D12MA_C_API extern "C" __declspec(dllexport)
 #else
-#   define D3D12MA_API extern __declspec(dllexport)
+#   define D3D12MA_C_API extern __declspec(dllexport)
 #endif
 
 #include <stddef.h>
 #include <stdint.h>
-#include <d3d12.h>
+#include <directx/d3d12.h>
 #include <dxgi1_4.h>
 
 typedef uint32_t D3D12MA_Bool32;
@@ -216,73 +219,75 @@ typedef struct D3D12MA_VirtualAllocation {
 } D3D12MA_VirtualAllocation;
 
 /* Top level API */
-D3D12MA_API HRESULT D3D12MA_CreateAllocator(const D3D12MA_ALLOCATOR_DESC* pDesc, D3D12MA_Allocator** ppAllocator);
-D3D12MA_API HRESULT D3D12MA_CreateVirtualBlock(const D3D12MA_VIRTUAL_BLOCK_DESC* pDesc, D3D12MA_VirtualBlock** ppVirtualBlock);
+D3D12MA_C_API HRESULT D3D12MA_CreateAllocator(const D3D12MA_ALLOCATOR_DESC* pDesc, D3D12MA_Allocator** ppAllocator);
+D3D12MA_C_API HRESULT D3D12MA_CreateVirtualBlock(const D3D12MA_VIRTUAL_BLOCK_DESC* pDesc, D3D12MA_VirtualBlock** ppVirtualBlock);
 
 /* D3D12MA_Allocator */
-D3D12MA_API uint32_t D3D12MA_Allocator_AddRef(D3D12MA_Allocator* pSelf);
-D3D12MA_API uint32_t D3D12MA_Allocator_Release(D3D12MA_Allocator* pSelf);
-D3D12MA_API D3D12MA_Bool32 D3D12MA_Allocator_IsUMA(D3D12MA_Allocator* pSelf);
-D3D12MA_API D3D12MA_Bool32 D3D12MA_Allocator_IsCacheCoherentUMA(D3D12MA_Allocator* pSelf);
-D3D12MA_API D3D12MA_Bool32 D3D12MA_Allocator_IsGPUUploadHeapSupported(D3D12MA_Allocator* pSelf);
-D3D12MA_API uint64_t D3D12MA_Allocator_GetMemoryCapacity(D3D12MA_Allocator* pSelf, uint32_t memorySegmentGroup);
-D3D12MA_API HRESULT D3D12MA_Allocator_CreateResource(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, D3D12MA_Pool** ppAllocation, REFIID riidResource, void** ppvResource);
-D3D12MA_API HRESULT D3D12MA_Allocator_CreateResource2(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, D3D12MA_Allocation** ppAllocation, REFIID riidResource, void** ppvResource);
-D3D12MA_API HRESULT D3D12MA_Allocator_CreateResource3(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_BARRIER_LAYOUT InitialLayout, const D3D12_CLEAR_VALUE* pOptimizedClearValue, uint32_t NumCastableFormats, DXGI_FORMAT* pCastableFormats, D3D12MA_Allocation** ppAllocation, REFIID riidResource, void** ppvResource);
-D3D12MA_API HRESULT D3D12MA_Allocator_AllocateMemory(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_ALLOCATION_INFO* pAllocInfo, D3D12MA_Allocation** ppAllocation);
-D3D12MA_API HRESULT D3D12MA_Allocator_CreateAliasingResource(D3D12MA_Allocator* pSelf, D3D12MA_Allocation* pAllocation, uint64_t AllocationLocalOffset, const D3D12_RESOURCE_DESC* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, REFIID riidResource, void** ppvResource);
-D3D12MA_API HRESULT D3D12MA_Allocator_CreateAliasingResource1(D3D12MA_Allocator* pSelf, D3D12MA_Allocation* pAllocation, uint64_t AllocationLocalOffset, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, REFIID riidResource, void** ppvResource);
-D3D12MA_API HRESULT D3D12MA_Allocator_CreateAliasingResource2(D3D12MA_Allocator* pSelf, D3D12MA_Allocation* pAllocation, uint64_t AllocationLocalOffset, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_BARRIER_LAYOUT InitialLayout, const D3D12_CLEAR_VALUE* pOptimizedClearValue, uint32_t NumCastableFormats, DXGI_FORMAT* pCastableFormats, REFIID riidResource, void** ppvResource);
+D3D12MA_C_API uint32_t D3D12MA_Allocator_AddRef(D3D12MA_Allocator* pSelf);
+D3D12MA_C_API uint32_t D3D12MA_Allocator_Release(D3D12MA_Allocator* pSelf);
+D3D12MA_C_API D3D12MA_Bool32 D3D12MA_Allocator_IsUMA(D3D12MA_Allocator* pSelf);
+D3D12MA_C_API D3D12MA_Bool32 D3D12MA_Allocator_IsCacheCoherentUMA(D3D12MA_Allocator* pSelf);
+D3D12MA_C_API D3D12MA_Bool32 D3D12MA_Allocator_IsGPUUploadHeapSupported(D3D12MA_Allocator* pSelf);
+D3D12MA_C_API uint64_t D3D12MA_Allocator_GetMemoryCapacity(D3D12MA_Allocator* pSelf, uint32_t memorySegmentGroup);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreateResource(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, D3D12MA_Pool** ppAllocation, REFIID riidResource, void** ppvResource);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreateResource2(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, D3D12MA_Allocation** ppAllocation, REFIID riidResource, void** ppvResource);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreateResource3(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_BARRIER_LAYOUT InitialLayout, const D3D12_CLEAR_VALUE* pOptimizedClearValue, uint32_t NumCastableFormats, DXGI_FORMAT* pCastableFormats, D3D12MA_Allocation** ppAllocation, REFIID riidResource, void** ppvResource);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_AllocateMemory(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_ALLOCATION_INFO* pAllocInfo, D3D12MA_Allocation** ppAllocation);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreateAliasingResource(D3D12MA_Allocator* pSelf, D3D12MA_Allocation* pAllocation, uint64_t AllocationLocalOffset, const D3D12_RESOURCE_DESC* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, REFIID riidResource, void** ppvResource);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreateAliasingResource1(D3D12MA_Allocator* pSelf, D3D12MA_Allocation* pAllocation, uint64_t AllocationLocalOffset, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, REFIID riidResource, void** ppvResource);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreateAliasingResource2(D3D12MA_Allocator* pSelf, D3D12MA_Allocation* pAllocation, uint64_t AllocationLocalOffset, const D3D12_RESOURCE_DESC1* pResourceDesc, D3D12_BARRIER_LAYOUT InitialLayout, const D3D12_CLEAR_VALUE* pOptimizedClearValue, uint32_t NumCastableFormats, DXGI_FORMAT* pCastableFormats, REFIID riidResource, void** ppvResource);
 
-D3D12MA_API HRESULT D3D12MA_Allocator_CreatePool(D3D12MA_Allocator* pSelf, const D3D12MA_POOL_DESC* pPoolDesc, D3D12MA_Pool** ppPool);
-D3D12MA_API void D3D12MA_Allocator_SetCurrentFrameIndex(D3D12MA_Allocator* pSelf, uint32_t frameIndex);
-D3D12MA_API void D3D12MA_Allocator_GetBudget(D3D12MA_Allocator* pSelf, D3D12MABudget* pLocalBudget, D3D12MABudget* pNonLocalBudget);
-D3D12MA_API void D3D12MA_Allocator_CalculateStatistics(D3D12MA_Allocator* pSelf, D3D12MATotalStatistics* pStats);
-D3D12MA_API void D3D12MA_Allocator_BuildStatsString(D3D12MA_Allocator* pSelf, wchar_t** ppStatsString, D3D12MA_Bool32 DetailedMap);
-D3D12MA_API void D3D12MA_Allocator_FreeStatsString(D3D12MA_Allocator* pSelf, wchar_t* pStatsString);
-D3D12MA_API void D3D12MA_Allocator_BeginDefragmentation(void* pSelf, const D3D12MA_DEFRAGMENTATION_DESC* pDesc, D3D12MA_DefragmentationContext** ppContext);
+D3D12MA_C_API HRESULT D3D12MA_Allocator_CreatePool(D3D12MA_Allocator* pSelf, const D3D12MA_POOL_DESC* pPoolDesc, D3D12MA_Pool** ppPool);
+D3D12MA_C_API void D3D12MA_Allocator_SetCurrentFrameIndex(D3D12MA_Allocator* pSelf, uint32_t frameIndex);
+D3D12MA_C_API void D3D12MA_Allocator_GetBudget(D3D12MA_Allocator* pSelf, D3D12MABudget* pLocalBudget, D3D12MABudget* pNonLocalBudget);
+D3D12MA_C_API void D3D12MA_Allocator_CalculateStatistics(D3D12MA_Allocator* pSelf, D3D12MATotalStatistics* pStats);
+D3D12MA_C_API void D3D12MA_Allocator_BuildStatsString(D3D12MA_Allocator* pSelf, wchar_t** ppStatsString, D3D12MA_Bool32 DetailedMap);
+D3D12MA_C_API void D3D12MA_Allocator_FreeStatsString(D3D12MA_Allocator* pSelf, wchar_t* pStatsString);
+D3D12MA_C_API void D3D12MA_Allocator_BeginDefragmentation(void* pSelf, const D3D12MA_DEFRAGMENTATION_DESC* pDesc, D3D12MA_DefragmentationContext** ppContext);
 
 /* D3D12MA_Allocation */
-D3D12MA_API uint32_t D3D12MA_Allocation_AddRef(D3D12MA_Allocation* pSelf);
-D3D12MA_API uint32_t D3D12MA_Allocation_Release(D3D12MA_Allocation* pSelf);
-D3D12MA_API uint64_t D3D12MA_Allocation_GetOffset(D3D12MA_Allocation* pSelf);
-D3D12MA_API uint64_t D3D12MA_Allocation_GetAlignment(D3D12MA_Allocation* pSelf);
-D3D12MA_API uint64_t D3D12MA_Allocation_GetSize(D3D12MA_Allocation* pSelf);
-D3D12MA_API ID3D12Resource* D3D12MA_Allocation_GetResource(D3D12MA_Allocation* pSelf);
-D3D12MA_API void D3D12MA_Allocation_SetResource(D3D12MA_Allocation* pSelf, ID3D12Resource* pResource);
-D3D12MA_API ID3D12Heap* D3D12MA_Allocation_GetHeap(D3D12MA_Allocation* pSelf);
-D3D12MA_API void D3D12MA_Allocation_SetPrivateData(D3D12MA_Allocation* pSelf, void* pPrivateData);
-D3D12MA_API void* D3D12MA_Allocation_GetPrivateData(D3D12MA_Allocation* pSelf);
-D3D12MA_API void D3D12MA_Allocation_SetName(D3D12MA_Allocation* pSelf, const wchar_t* Name);
-D3D12MA_API const wchar_t* D3D12MA_Allocation_GetName(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API uint32_t D3D12MA_Allocation_AddRef(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API uint32_t D3D12MA_Allocation_Release(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API uint64_t D3D12MA_Allocation_GetOffset(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API uint64_t D3D12MA_Allocation_GetAlignment(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API uint64_t D3D12MA_Allocation_GetSize(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API ID3D12Resource* D3D12MA_Allocation_GetResource(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API void D3D12MA_Allocation_SetResource(D3D12MA_Allocation* pSelf, ID3D12Resource* pResource);
+D3D12MA_C_API ID3D12Heap* D3D12MA_Allocation_GetHeap(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API void D3D12MA_Allocation_SetPrivateData(D3D12MA_Allocation* pSelf, void* pPrivateData);
+D3D12MA_C_API void* D3D12MA_Allocation_GetPrivateData(D3D12MA_Allocation* pSelf);
+D3D12MA_C_API void D3D12MA_Allocation_SetName(D3D12MA_Allocation* pSelf, const wchar_t* Name);
+D3D12MA_C_API const wchar_t* D3D12MA_Allocation_GetName(D3D12MA_Allocation* pSelf);
 
 /* D3D12MA_Pool */
-D3D12MA_API uint32_t D3D12MA_Pool_AddRef(D3D12MA_Pool* pSelf);
-D3D12MA_API uint32_t D3D12MA_Pool_Release(D3D12MA_Pool* pSelf);
-D3D12MA_API void D3D12MA_Pool_GetDesc(D3D12MA_Pool* pSelf, D3D12MA_POOL_DESC* pDesc);
-D3D12MA_API void D3D12MA_Pool_GetStatistics(D3D12MA_Pool* pSelf, D3D12MAStatistics* pStats);
-D3D12MA_API void D3D12MA_Pool_CalculateStatistics(D3D12MA_Pool* pSelf, D3D12MADetailedStatistics* pStats);
-D3D12MA_API void D3D12MA_Pool_SetName(D3D12MA_Pool* pSelf, const wchar_t* Name);
-D3D12MA_API const wchar_t* D3D12MA_Pool_GetName(D3D12MA_Pool* pSelf);
-D3D12MA_API HRESULT D3D12MA_Pool_BeginDefragmentation(D3D12MA_Pool* pSelf, const D3D12MA_DEFRAGMENTATION_DESC* pDesc, D3D12MA_DefragmentationContext** ppContext);
+D3D12MA_C_API uint32_t D3D12MA_Pool_AddRef(D3D12MA_Pool* pSelf);
+D3D12MA_C_API uint32_t D3D12MA_Pool_Release(D3D12MA_Pool* pSelf);
+D3D12MA_C_API void D3D12MA_Pool_GetDesc(D3D12MA_Pool* pSelf, D3D12MA_POOL_DESC* pDesc);
+D3D12MA_C_API void D3D12MA_Pool_GetStatistics(D3D12MA_Pool* pSelf, D3D12MAStatistics* pStats);
+D3D12MA_C_API void D3D12MA_Pool_CalculateStatistics(D3D12MA_Pool* pSelf, D3D12MADetailedStatistics* pStats);
+D3D12MA_C_API void D3D12MA_Pool_SetName(D3D12MA_Pool* pSelf, const wchar_t* Name);
+D3D12MA_C_API const wchar_t* D3D12MA_Pool_GetName(D3D12MA_Pool* pSelf);
+D3D12MA_C_API HRESULT D3D12MA_Pool_BeginDefragmentation(D3D12MA_Pool* pSelf, const D3D12MA_DEFRAGMENTATION_DESC* pDesc, D3D12MA_DefragmentationContext** ppContext);
 
 /* D3D12MA_VirtualBlock */
-D3D12MA_API uint32_t D3D12MA_VirtualBlock_AddRef(D3D12MA_VirtualBlock* pSelf);
-D3D12MA_API uint32_t D3D12MA_VirtualBlock_Release(D3D12MA_VirtualBlock* pSelf);
-D3D12MA_API D3D12MA_Bool32 D3D12MAVirtualBlock_IsEmpty(D3D12MA_VirtualBlock* pSelf);
-D3D12MA_API void D3D12MAVirtualBlock_GetAllocationInfo(D3D12MA_VirtualBlock* pSelf, D3D12MA_VirtualAllocation Allocation, D3D12MA_VIRTUAL_ALLOCATION_INFO* pInfo);
-D3D12MA_API HRESULT D3D12MAVirtualBlock_Allocate(D3D12MA_VirtualBlock* pSelf, const D3D12MA_VIRTUAL_ALLOCATION_DESC* pDesc, D3D12MA_VirtualAllocation* pAllocation, uint64_t* pOffset);
-D3D12MA_API void D3D12MAVirtualBlock_FreeAllocation(D3D12MA_VirtualBlock* pSelf, D3D12MA_VirtualAllocation Allocation);
-D3D12MA_API void D3D12MAVirtualBlock_Clear(D3D12MA_VirtualBlock* pSelf);
-D3D12MA_API void D3D12MAVirtualBlock_SetAllocationPrivateData(D3D12MA_VirtualBlock* pSelf, D3D12MA_VirtualAllocation Allocation, void* pPrivateData);
-D3D12MA_API void D3D12MAVirtualBlock_GetStatistics(D3D12MA_VirtualBlock* pSelf, D3D12MAStatistics* pStats);
-D3D12MA_API void D3D12MAVirtualBlock_CalculateStatistics(D3D12MA_VirtualBlock* pSelf, D3D12MADetailedStatistics* pStats);
-D3D12MA_API void D3D12MAVirtualBlock_BuildStatsString(D3D12MA_VirtualBlock* pSelf, wchar_t** ppStatsString);
-D3D12MA_API void D3D12MAVirtualBlock_FreeStatsString(D3D12MA_VirtualBlock* pSelf, wchar_t* pStatsString);
+D3D12MA_C_API uint32_t D3D12MA_VirtualBlock_AddRef(D3D12MA_VirtualBlock* pSelf);
+D3D12MA_C_API uint32_t D3D12MA_VirtualBlock_Release(D3D12MA_VirtualBlock* pSelf);
+D3D12MA_C_API D3D12MA_Bool32 D3D12MAVirtualBlock_IsEmpty(D3D12MA_VirtualBlock* pSelf);
+D3D12MA_C_API void D3D12MAVirtualBlock_GetAllocationInfo(D3D12MA_VirtualBlock* pSelf, D3D12MA_VirtualAllocation Allocation, D3D12MA_VIRTUAL_ALLOCATION_INFO* pInfo);
+D3D12MA_C_API HRESULT D3D12MAVirtualBlock_Allocate(D3D12MA_VirtualBlock* pSelf, const D3D12MA_VIRTUAL_ALLOCATION_DESC* pDesc, D3D12MA_VirtualAllocation* pAllocation, uint64_t* pOffset);
+D3D12MA_C_API void D3D12MAVirtualBlock_FreeAllocation(D3D12MA_VirtualBlock* pSelf, D3D12MA_VirtualAllocation Allocation);
+D3D12MA_C_API void D3D12MAVirtualBlock_Clear(D3D12MA_VirtualBlock* pSelf);
+D3D12MA_C_API void D3D12MAVirtualBlock_SetAllocationPrivateData(D3D12MA_VirtualBlock* pSelf, D3D12MA_VirtualAllocation Allocation, void* pPrivateData);
+D3D12MA_C_API void D3D12MAVirtualBlock_GetStatistics(D3D12MA_VirtualBlock* pSelf, D3D12MAStatistics* pStats);
+D3D12MA_C_API void D3D12MAVirtualBlock_CalculateStatistics(D3D12MA_VirtualBlock* pSelf, D3D12MADetailedStatistics* pStats);
+D3D12MA_C_API void D3D12MAVirtualBlock_BuildStatsString(D3D12MA_VirtualBlock* pSelf, wchar_t** ppStatsString);
+D3D12MA_C_API void D3D12MAVirtualBlock_FreeStatsString(D3D12MA_VirtualBlock* pSelf, wchar_t* pStatsString);
 
 /* D3D12MA_DefragmentationContext */
-D3D12MA_API uint32_t D3D12MA_DefragmentationContext_AddRef(D3D12MA_DefragmentationContext* pSelf);
-D3D12MA_API uint32_t D3D12MA_DefragmentationContext_Release(D3D12MA_DefragmentationContext* pSelf);
-D3D12MA_API HRESULT D3D12MA_DefragmentationContext_BeginPass(D3D12MA_DefragmentationContext* pSelf, D3D12MA_DEFRAGMENTATION_PASS_MOVE_INFO* pPassInfo);
-D3D12MA_API HRESULT D3D12MA_DefragmentationContext_EndPass(D3D12MA_DefragmentationContext* pSelf, D3D12MA_DEFRAGMENTATION_PASS_MOVE_INFO* pPassInfo);
-D3D12MA_API void D3D12MA_DefragmentationContext_GetStats(D3D12MA_DefragmentationContext* pSelf, D3D12MA_DEFRAGMENTATION_STATS* pStats);
+D3D12MA_C_API uint32_t D3D12MA_DefragmentationContext_AddRef(D3D12MA_DefragmentationContext* pSelf);
+D3D12MA_C_API uint32_t D3D12MA_DefragmentationContext_Release(D3D12MA_DefragmentationContext* pSelf);
+D3D12MA_C_API HRESULT D3D12MA_DefragmentationContext_BeginPass(D3D12MA_DefragmentationContext* pSelf, D3D12MA_DEFRAGMENTATION_PASS_MOVE_INFO* pPassInfo);
+D3D12MA_C_API HRESULT D3D12MA_DefragmentationContext_EndPass(D3D12MA_DefragmentationContext* pSelf, D3D12MA_DEFRAGMENTATION_PASS_MOVE_INFO* pPassInfo);
+D3D12MA_C_API void D3D12MA_DefragmentationContext_GetStats(D3D12MA_DefragmentationContext* pSelf, D3D12MA_DEFRAGMENTATION_STATS* pStats);
+
+#endif /* D3D12MA_C_H_ */

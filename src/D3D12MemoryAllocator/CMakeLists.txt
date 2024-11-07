@@ -9,6 +9,8 @@ add_library(D3D12MemoryAllocator ${SOURCE_FILES})
 target_include_directories(D3D12MemoryAllocator PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/include
 )
+target_link_libraries(D3D12MemoryAllocator PRIVATE DirectX-Headers)
+target_compile_definitions(D3D12MemoryAllocator PRIVATE D3D12MA_USING_DIRECTX_HEADERS)
 
 set_target_properties(
     D3D12MemoryAllocator PROPERTIES
