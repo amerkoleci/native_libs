@@ -1,5 +1,6 @@
 set(SOURCE_FILES
     include/D3D12MemAlloc.h
+    include/D3D12MemAlloc_Exports.h
     src/D3D12MemAlloc.cpp
     src/D3D12MemAlloc_Exports.cpp
 )

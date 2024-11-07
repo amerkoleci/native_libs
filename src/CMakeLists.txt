@@ -41,14 +41,14 @@ endif ()
 add_subdirectory(ktx)
 
 # box2d
-CPMAddPackage(
-    NAME box2d
-    GITHUB_REPOSITORY erincatto/box2d
-    GIT_TAG 87e13e44378afc42598a4f7e8b2d5289982cdda7
-    OPTIONS
-        "BOX2D_SANITIZE OFF"
-        "BOX2D_ENABLE_SIMD ON"
-)
+#CPMAddPackage(
+#    NAME box2d
+#    GITHUB_REPOSITORY erincatto/box2d
+#    GIT_TAG 87e13e44378afc42598a4f7e8b2d5289982cdda7
+#    OPTIONS
+#        "BOX2D_SANITIZE OFF"
+#        "BOX2D_ENABLE_SIMD ON"
+#)
 
 # glfw
 if(NOT (EMSCRIPTEN OR ANDROID OR WINDOWS_STORE))
