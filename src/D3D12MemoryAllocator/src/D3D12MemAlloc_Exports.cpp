@@ -217,7 +217,7 @@ uint64_t D3D12MA_Allocator_GetMemoryCapacity(D3D12MA_Allocator* pSelf, uint32_t 
     return self->GetMemoryCapacity(memorySegmentGroup);
 }
 
-HRESULT D3D12MA_Allocator_CreateResource(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, D3D12MA_Pool** ppAllocation, REFIID riidResource, void** ppvResource)
+HRESULT D3D12MA_Allocator_CreateResource(D3D12MA_Allocator* pSelf, const D3D12MA_ALLOCATION_DESC* pAllocDesc, const D3D12_RESOURCE_DESC* pResourceDesc, D3D12_RESOURCE_STATES InitialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue, D3D12MA_Allocation** ppAllocation, REFIID riidResource, void** ppvResource)
 {
     D3D12MA::Allocator* self = reinterpret_cast<D3D12MA::Allocator*>(pSelf);
     const D3D12MA::ALLOCATION_DESC* alloc_desc = reinterpret_cast<const D3D12MA::ALLOCATION_DESC*>(pAllocDesc);
