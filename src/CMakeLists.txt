@@ -52,7 +52,7 @@ add_subdirectory(ktx)
 #CPMAddPackage(
 #    NAME box2d
 #    GITHUB_REPOSITORY erincatto/box2d
-#    GIT_TAG 87e13e44378afc42598a4f7e8b2d5289982cdda7
+#    GIT_TAG f377034920c42a26cd498c0a0b1b2e9f2b064989
 #    OPTIONS
 #        "BOX2D_SANITIZE OFF"
 #        "BOX2D_ENABLE_SIMD ON"

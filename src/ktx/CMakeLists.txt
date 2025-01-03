@@ -28,6 +28,7 @@ set(KTX_SOURCES
     ${KTX_DIR}/utils/unused.h
     
     # Basis Universal
+    ${KTX_DIR}/lib/astc_codec.cpp
     ${KTX_DIR}/lib/basis_sgd.h
     ${KTX_DIR}/lib/basis_transcode.cpp
     ${KTX_DIR}/lib/miniz_wrapper.cpp
