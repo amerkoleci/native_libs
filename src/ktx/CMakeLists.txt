@@ -10,6 +10,28 @@ set(KTX_SOURCES
     ${KTX_DIR}/external/dfdutils/queries.c
     ${KTX_DIR}/external/dfdutils/vk2dfd.c
     ${KTX_DIR}/external/etcdec/etcdec.cxx
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_averages_and_directions.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_block_sizes.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_color_quantize.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_color_unquantize.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_compress_symbolic.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_compute_variance.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_decompress_symbolic.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_diagnostic_trace.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_entry.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_find_best_partitioning.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_ideal_endpoints_and_weights.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_image.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_integer_sequence.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_mathlib.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_mathlib_softfloat.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_partition_tables.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_percentile_tables.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_pick_best_endpoint_format.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_quantization.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_symbolic_physical.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_weight_align.cpp
+    ${KTX_DIR}/external/astc-encoder/Source/astcenc_weight_quant_xfer_tables.cpp
     ${KTX_DIR}/lib/checkheader.c
     ${KTX_DIR}/lib/etcunpack.cxx
     ${KTX_DIR}/lib/filestream.c
