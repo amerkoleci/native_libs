@@ -1,27 +1,10 @@
 # Define target name
 set (TARGET_NAME meshoptimizer)
 
-set(SOURCE_FILES
-    src/meshoptimizer.h
-    src/allocator.cpp
-	src/clusterizer.cpp
-	src/indexcodec.cpp
-	src/indexgenerator.cpp
-	src/overdrawanalyzer.cpp
-	src/overdrawoptimizer.cpp
-    src/quantization.cpp
-	src/simplifier.cpp
-	src/spatialorder.cpp
-	src/stripifier.cpp
-	src/vcacheanalyzer.cpp
-	src/vcacheoptimizer.cpp
-	src/vertexcodec.cpp
-	src/vertexfilter.cpp
-	src/vfetchanalyzer.cpp
-	src/vfetchoptimizer.cpp
-)
+file (GLOB HEADER_FILES src/*.h)
+file (GLOB SOURCE_FILES src/*.cpp)
 
-add_library(${TARGET_NAME} ${SOURCE_FILES})
+add_library(${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
 if(BUILD_SHARED_LIBS)
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
