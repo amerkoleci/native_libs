@@ -1,7 +1,7 @@
 /**
  * cgltf - a single-file glTF 2.0 parser written in C99.
  *
- * Version: 1.14
+ * Version: 1.15
  *
  * Website: https://github.com/jkuhlmann/cgltf
  *
@@ -2352,11 +2352,46 @@ const cgltf_accessor* cgltf_find_accessor(const cgltf_primitive* prim, cgltf_att
 	return NULL;
 }
 
+static const uint8_t* cgltf_find_sparse_index(const cgltf_accessor* accessor, cgltf_size needle)
+{
+	const cgltf_accessor_sparse* sparse = &accessor->sparse;
+	const uint8_t* index_data = cgltf_buffer_view_data(sparse->indices_buffer_view);
+	const uint8_t* value_data = cgltf_buffer_view_data(sparse->values_buffer_view);
+
+	if (index_data == NULL || value_data == NULL)
+		return NULL;
+
+	index_data += sparse->indices_byte_offset;
+	value_data += sparse->values_byte_offset;
+
+	cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
+
+	cgltf_size offset = 0;
+	cgltf_size length = sparse->count;
+
+	while (length)
+	{
+		cgltf_size rem = length % 2;
+		length /= 2;
+
+		cgltf_size index = cgltf_component_read_index(index_data + (offset + length) * index_stride, sparse->indices_component_type);
+		offset += index < needle ? length + rem : 0;
+	}
+
+	if (offset == sparse->count)
+		return NULL;
+
+	cgltf_size index = cgltf_component_read_index(index_data + offset * index_stride, sparse->indices_component_type);
+	return index == needle ? value_data + offset * accessor->stride : NULL;
+}
+
 cgltf_bool cgltf_accessor_read_float(const cgltf_accessor* accessor, cgltf_size index, cgltf_float* out, cgltf_size element_size)
 {
 	if (accessor->is_sparse)
 	{
-		return 0;
+		const uint8_t* element = cgltf_find_sparse_index(accessor, index);
+		if (element)
+			return cgltf_element_read_float(element, accessor->type, accessor->component_type, accessor->normalized, out, element_size);
 	}
 	if (accessor->buffer_view == NULL)
 	{
@@ -2500,11 +2535,13 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
 {
 	if (accessor->is_sparse)
 	{
-		return 0;
+		const uint8_t* element = cgltf_find_sparse_index(accessor, index);
+		if (element)
+			return cgltf_element_read_uint(element, accessor->type, accessor->component_type, out, element_size);
 	}
 	if (accessor->buffer_view == NULL)
 	{
-		memset(out, 0, element_size * sizeof( cgltf_uint ));
+		memset(out, 0, element_size * sizeof(cgltf_uint));
 		return 1;
 	}
 	const uint8_t* element = cgltf_buffer_view_data(accessor->buffer_view);
@@ -2520,7 +2557,9 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size 
 {
 	if (accessor->is_sparse)
 	{
-		return 0; // This is an error case, but we can't communicate the error with existing interface.
+		const uint8_t* element = cgltf_find_sparse_index(accessor, index);
+		if (element)
+			return cgltf_component_read_index(element, accessor->component_type);
 	}
 	if (accessor->buffer_view == NULL)
 	{
@@ -2638,7 +2677,10 @@ cgltf_size cgltf_accessor_unpack_indices(const cgltf_accessor* accessor, void* o
 		return accessor->count;
 	}
 
-	index_count = accessor->count < index_count ? accessor->count : index_count;
+	cgltf_size numbers_per_element = cgltf_num_components(accessor->type);
+	cgltf_size available_numbers = accessor->count * numbers_per_element;
+
+	index_count = available_numbers < index_count ? available_numbers : index_count;
 	cgltf_size index_component_size = cgltf_component_size(accessor->component_type);
 
 	if (accessor->is_sparse)
@@ -2660,15 +2702,23 @@ cgltf_size cgltf_accessor_unpack_indices(const cgltf_accessor* accessor, void* o
 	}
 	element += accessor->offset;
 
-	if (index_component_size == out_component_size && accessor->stride == out_component_size)
+	if (index_component_size == out_component_size && accessor->stride == out_component_size * numbers_per_element)
 	{
 		memcpy(out, element, index_count * index_component_size);
 		return index_count;
 	}
 
+	// Data couldn't be copied with memcpy due to stride being larger than the component size.
+	// OR
 	// The component size of the output array is larger than the component size of the index data, so index data will be padded.
 	switch (out_component_size)
 	{
+	case 1:
+		for (cgltf_size index = 0; index < index_count; index++, element += accessor->stride)
+		{
+			((uint8_t*)out)[index] = (uint8_t)cgltf_component_read_index(element, accessor->component_type);
+		}
+		break;
 	case 2:
 		for (cgltf_size index = 0; index < index_count; index++, element += accessor->stride)
 		{
@@ -2682,7 +2732,7 @@ cgltf_size cgltf_accessor_unpack_indices(const cgltf_accessor* accessor, void* o
 		}
 		break;
 	default:
-		break;
+		return 0;
 	}
 
 	return index_count;
