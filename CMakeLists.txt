@@ -139,6 +139,7 @@ if(EMSCRIPTEN)
 
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
 elseif(ANDROID)
+    add_link_options("-Wl,-z,max-page-size=16384")
 elseif(UNIX)
     if(APPLE)
 	    set(CMAKE_MACOSX_RPATH ON)
