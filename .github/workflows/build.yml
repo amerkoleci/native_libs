@@ -21,7 +21,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Get CMake
       uses: lukka/get-cmake@v4.0.2
@@ -50,7 +50,7 @@ jobs:
   linux:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install dependencies
       run: |
@@ -65,6 +65,11 @@ jobs:
       run: cmake -S . -B build_linux_64 -G Ninja -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_INSTALL_PREFIX="linux-x64-sdk"
     - name: CMake Build linux-x64
       run: cmake --build build_linux_64 --config Release --target install --verbose --parallel
+
+    - name: CMake Configure linux-arm64
+      run: cmake -S . -B build_linux_arm64 -G Ninja -DCMAKE_BUILD_TYPE:String=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_INSTALL_PREFIX="linux-arm64-sdk"
+    - name: CMake Build linux-arm64
+      run: cmake --build build_linux_arm64 --config Release --target install --verbose --parallel
 
     # Android
     - name: Setup Android NDK
@@ -117,6 +122,7 @@ jobs:
         mkdir -p bin/android-arm
         mkdir -p bin/android-x64
         mv linux-x64-sdk/lib/*.so bin/linux-x64
+        mv linux-arm64-sdk/lib/*.so bin/linux-arm64
         mv android-arm64_v8a-sdk/lib/*.so bin/android-arm64
         mv android-armeabi_v7a-sdk/lib/*.so bin/android-arm
         mv android-x86_64-sdk/lib/*.so bin/android-x64
@@ -128,7 +134,7 @@ jobs:
   macos:
     runs-on: macos-14
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Get CMake
       uses: lukka/get-cmake@v4.0.2
