@@ -55,8 +55,7 @@ jobs:
     - name: Install dependencies
       run: |
           sudo apt update
-          sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libwayland-dev libxkbcommon-dev
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libwayland-dev libxkbcommon-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
     - name: Get CMake
       uses: lukka/get-cmake@v4.0.2
