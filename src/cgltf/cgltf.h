@@ -141,7 +141,7 @@ typedef struct cgltf_memory_options
 typedef struct cgltf_file_options
 {
 	cgltf_result(*read)(const struct cgltf_memory_options* memory_options, const struct cgltf_file_options* file_options, const char* path, cgltf_size* size, void** data);
-	void (*release)(const struct cgltf_memory_options* memory_options, const struct cgltf_file_options* file_options, void* data);
+	void (*release)(const struct cgltf_memory_options* memory_options, const struct cgltf_file_options* file_options, void* data, cgltf_size size);
 	void* user_data;
 } cgltf_file_options;
 
@@ -296,6 +296,7 @@ typedef enum cgltf_meshopt_compression_filter {
 	cgltf_meshopt_compression_filter_octahedral,
 	cgltf_meshopt_compression_filter_quaternion,
 	cgltf_meshopt_compression_filter_exponential,
+	cgltf_meshopt_compression_filter_color,
 	cgltf_meshopt_compression_filter_max_enum
 } cgltf_meshopt_compression_filter;
 
@@ -308,6 +309,7 @@ typedef struct cgltf_meshopt_compression
 	cgltf_size count;
 	cgltf_meshopt_compression_mode mode;
 	cgltf_meshopt_compression_filter filter;
+	cgltf_bool is_khr;
 } cgltf_meshopt_compression;
 
 typedef struct cgltf_buffer_view
@@ -769,6 +771,7 @@ typedef struct cgltf_data
 {
 	cgltf_file_type file_type;
 	void* file_data;
+	cgltf_size file_size;
 
 	cgltf_asset asset;
 
@@ -1099,9 +1102,10 @@ static cgltf_result cgltf_default_file_read(const struct cgltf_memory_options* m
 	return cgltf_result_success;
 }
 
-static void cgltf_default_file_release(const struct cgltf_memory_options* memory_options, const struct cgltf_file_options* file_options, void* data)
+static void cgltf_default_file_release(const struct cgltf_memory_options* memory_options, const struct cgltf_file_options* file_options, void* data, cgltf_size size)
 {
 	(void)file_options;
+	(void)size;
 	void (*memfree)(void*, void*) = memory_options->free_func ? memory_options->free_func : &cgltf_default_free;
 	memfree(memory_options->user_data, data);
 }
@@ -1248,7 +1252,7 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const char* path, cg
 	}
 
 	cgltf_result (*file_read)(const struct cgltf_memory_options*, const struct cgltf_file_options*, const char*, cgltf_size*, void**) = options->file.read ? options->file.read : &cgltf_default_file_read;
-	void (*file_release)(const struct cgltf_memory_options*, const struct cgltf_file_options*, void* data) = options->file.release ? options->file.release : cgltf_default_file_release;
+	void (*file_release)(const struct cgltf_memory_options*, const struct cgltf_file_options*, void* data, cgltf_size size) = options->file.release ? options->file.release : cgltf_default_file_release;
 
 	void* file_data = NULL;
 	cgltf_size file_size = 0;
@@ -1262,11 +1266,12 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const char* path, cg
 
 	if (result != cgltf_result_success)
 	{
-		file_release(&options->memory, &options->file, file_data);
+		file_release(&options->memory, &options->file, file_data, file_size);
 		return result;
 	}
 
 	(*out_data)->file_data = file_data;
+	(*out_data)->file_size = file_size;
 
 	return cgltf_result_success;
 }
@@ -1658,8 +1663,8 @@ cgltf_result cgltf_validate(cgltf_data* data)
 			CGLTF_ASSERT_IF((mc->mode == cgltf_meshopt_compression_mode_triangles || mc->mode == cgltf_meshopt_compression_mode_indices) && mc->filter != cgltf_meshopt_compression_filter_none, cgltf_result_invalid_gltf);
 
 			CGLTF_ASSERT_IF(mc->filter == cgltf_meshopt_compression_filter_octahedral && mc->stride != 4 && mc->stride != 8, cgltf_result_invalid_gltf);
-
 			CGLTF_ASSERT_IF(mc->filter == cgltf_meshopt_compression_filter_quaternion && mc->stride != 8, cgltf_result_invalid_gltf);
+			CGLTF_ASSERT_IF(mc->filter == cgltf_meshopt_compression_filter_color && mc->stride != 4 && mc->stride != 8, cgltf_result_invalid_gltf);
 		}
 	}
 
@@ -1850,7 +1855,7 @@ void cgltf_free(cgltf_data* data)
 		return;
 	}
 
-	void (*file_release)(const struct cgltf_memory_options*, const struct cgltf_file_options*, void* data) = data->file.release ? data->file.release : cgltf_default_file_release;
+	void (*file_release)(const struct cgltf_memory_options*, const struct cgltf_file_options*, void* data, cgltf_size size) = data->file.release ? data->file.release : cgltf_default_file_release;
 
 	data->memory.free_func(data->memory.user_data, data->asset.copyright);
 	data->memory.free_func(data->memory.user_data, data->asset.generator);
@@ -1885,7 +1890,7 @@ void cgltf_free(cgltf_data* data)
 
 		if (data->buffers[i].data_free_method == cgltf_data_free_method_file_release)
 		{
-			file_release(&data->memory, &data->file, data->buffers[i].data);
+			file_release(&data->memory, &data->file, data->buffers[i].data, data->buffers[i].size);
 		}
 		else if (data->buffers[i].data_free_method == cgltf_data_free_method_memory_free)
 		{
@@ -2124,7 +2129,7 @@ void cgltf_free(cgltf_data* data)
 
 	data->memory.free_func(data->memory.user_data, data->extensions_required);
 
-	file_release(&data->memory, &data->file, data->file_data);
+	file_release(&data->memory, &data->file, data->file_data, data->file_size);
 
 	data->memory.free_func(data->memory.user_data, data);
 }
@@ -5115,6 +5120,10 @@ static int cgltf_parse_json_meshopt_compression(cgltf_options* options, jsmntok_
 			{
 				out_meshopt_compression->filter = cgltf_meshopt_compression_filter_exponential;
 			}
+			else if (cgltf_json_strcmp(tokens+i, json_chunk, "COLOR") == 0)
+			{
+				out_meshopt_compression->filter = cgltf_meshopt_compression_filter_color;
+			}
 			++i;
 		}
 		else
@@ -5223,6 +5232,12 @@ static int cgltf_parse_json_buffer_view(cgltf_options* options, jsmntok_t const*
 				if (cgltf_json_strcmp(tokens+i, json_chunk, "EXT_meshopt_compression") == 0)
 				{
 					out_buffer_view->has_meshopt_compression = 1;
+					i = cgltf_parse_json_meshopt_compression(options, tokens, i + 1, json_chunk, &out_buffer_view->meshopt_compression);
+				}
+				else if (cgltf_json_strcmp(tokens+i, json_chunk, "KHR_meshopt_compression") == 0)
+				{
+					out_buffer_view->has_meshopt_compression = 1;
+					out_buffer_view->meshopt_compression.is_khr = 1;
 					i = cgltf_parse_json_meshopt_compression(options, tokens, i + 1, json_chunk, &out_buffer_view->meshopt_compression);
 				}
 				else
