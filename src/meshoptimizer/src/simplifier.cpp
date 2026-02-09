@@ -243,14 +243,18 @@ static unsigned int* buildSparseRemap(unsigned int* indices, size_t index_count,
 {
 	// use a bit set to compute the precise number of unique vertices
 	unsigned char* filter = allocator.allocate<unsigned char>((vertex_count + 7) / 8);
-	memset(filter, 0, (vertex_count + 7) / 8);
+
+	for (size_t i = 0; i < index_count; ++i)
+	{
+		unsigned int index = indices[i];
+		assert(index < vertex_count);
+		filter[index / 8] = 0;
+	}
 
 	size_t unique = 0;
 	for (size_t i = 0; i < index_count; ++i)
 	{
 		unsigned int index = indices[i];
-		assert(index < vertex_count);
-
 		unique += (filter[index / 8] & (1 << (index % 8))) == 0;
 		filter[index / 8] |= 1 << (index % 8);
 	}
@@ -269,7 +273,6 @@ static unsigned int* buildSparseRemap(unsigned int* indices, size_t index_count,
 	for (size_t i = 0; i < index_count; ++i)
 	{
 		unsigned int index = indices[i];
-
 		unsigned int* entry = hashLookup2(revremap, revremap_size, hasher, index, ~0u);
 
 		if (*entry == ~0u)
@@ -317,11 +320,13 @@ const unsigned char kCanCollapse[Kind_Count][Kind_Count] = {
 // if a vertex is manifold or seam, adjoining edges are guaranteed to have an opposite edge
 // note that for seam edges, the opposite edge isn't present in the attribute-based topology
 // but is present if you consider a position-only mesh variant
+// while many complex collapses have the opposite edge, since complex vertices collapse to the
+// same wedge, keeping opposite edges separate improves the quality by considering both targets
 const unsigned char kHasOpposite[Kind_Count][Kind_Count] = {
-    {1, 1, 1, 0, 1},
+    {1, 1, 1, 1, 1},
     {1, 0, 1, 0, 0},
     {1, 1, 1, 0, 1},
-    {0, 0, 0, 0, 0},
+    {1, 0, 0, 0, 0},
     {1, 0, 1, 0, 0},
 };
 
@@ -337,14 +342,33 @@ static bool hasEdge(const EdgeAdjacency& adjacency, unsigned int a, unsigned int
 	return false;
 }
 
+static bool hasEdge(const EdgeAdjacency& adjacency, unsigned int a, unsigned int b, const unsigned int* remap, const unsigned int* wedge)
+{
+	unsigned int v = a;
+
+	do
+	{
+		unsigned int count = adjacency.offsets[v + 1] - adjacency.offsets[v];
+		const EdgeAdjacency::Edge* edges = adjacency.data + adjacency.offsets[v];
+
+		for (size_t i = 0; i < count; ++i)
+			if (remap[edges[i].next] == remap[b])
+				return true;
+
+		v = wedge[v];
+	} while (v != a);
+
+	return false;
+}
+
 static void classifyVertices(unsigned char* result, unsigned int* loop, unsigned int* loopback, size_t vertex_count, const EdgeAdjacency& adjacency, const unsigned int* remap, const unsigned int* wedge, const unsigned char* vertex_lock, const unsigned int* sparse_remap, unsigned int options)
 {
 	memset(loop, -1, vertex_count * sizeof(unsigned int));
 	memset(loopback, -1, vertex_count * sizeof(unsigned int));
 
 	// incoming & outgoing open edges: ~0u if no open edges, i if there are more than 1
-	// note that this is the same data as required in loop[] arrays; loop[] data is only valid for border/seam
-	// but here it's okay to fill the data out for other types of vertices as well
+	// note that this is the same data as required in loop[] arrays; loop[] data is only used for border/seam by default
+	// in permissive mode we also use it to guide complex-complex collapses, so we fill it for all vertices
 	unsigned int* openinc = loopback;
 	unsigned int* openout = loop;
 
@@ -454,15 +478,50 @@ static void classifyVertices(unsigned char* result, unsigned int* loop, unsigned
 		}
 	}
 
+	if (options & meshopt_SimplifyPermissive)
+		for (size_t i = 0; i < vertex_count; ++i)
+			if (result[i] == Kind_Seam || result[i] == Kind_Locked)
+			{
+				if (remap[i] != i)
+				{
+					// only process primary vertices; wedges will be updated to match the primary vertex
+					result[i] = result[remap[i]];
+					continue;
+				}
+
+				bool protect = false;
+
+				// vertex_lock may protect any wedge, not just the primary vertex, so we switch to complex only if no wedges are protected
+				unsigned int v = unsigned(i);
+				do
+				{
+					unsigned int rv = sparse_remap ? sparse_remap[v] : v;
+					protect |= vertex_lock && (vertex_lock[rv] & meshopt_SimplifyVertex_Protect) != 0;
+					v = wedge[v];
+				} while (v != i);
+
+				// protect if any adjoining edge doesn't have an opposite edge (indicating vertex is on the border)
+				do
+				{
+					const EdgeAdjacency::Edge* edges = &adjacency.data[adjacency.offsets[v]];
+					size_t count = adjacency.offsets[v + 1] - adjacency.offsets[v];
+
+					for (size_t j = 0; j < count; ++j)
+						protect |= !hasEdge(adjacency, edges[j].next, v, remap, wedge);
+					v = wedge[v];
+				} while (v != i);
+
+				result[i] = protect ? result[i] : int(Kind_Complex);
+			}
+
 	if (vertex_lock)
 	{
 		// vertex_lock may lock any wedge, not just the primary vertex, so we need to lock the primary vertex and relock any wedges
 		for (size_t i = 0; i < vertex_count; ++i)
 		{
 			unsigned int ri = sparse_remap ? sparse_remap[i] : unsigned(i);
-			assert(vertex_lock[ri] <= 1); // values other than 0/1 are reserved for future use
 
-			if (vertex_lock[ri])
+			if (vertex_lock[ri] & meshopt_SimplifyVertex_Lock)
 				result[remap[i]] = Kind_Locked;
 		}
 
@@ -561,7 +620,7 @@ static void rescaleAttributes(float* result, const float* vertex_attributes_data
 	}
 }
 
-static void finalizeVertices(float* vertex_positions_data, size_t vertex_positions_stride, float* vertex_attributes_data, size_t vertex_attributes_stride, const float* attribute_weights, size_t attribute_count, size_t vertex_count, const Vector3* vertex_positions, const float* vertex_attributes, const unsigned int* sparse_remap, const unsigned int* attribute_remap, float vertex_scale, const float* vertex_offset, const unsigned char* vertex_update)
+static void finalizeVertices(float* vertex_positions_data, size_t vertex_positions_stride, float* vertex_attributes_data, size_t vertex_attributes_stride, const float* attribute_weights, size_t attribute_count, size_t vertex_count, const Vector3* vertex_positions, const float* vertex_attributes, const unsigned int* sparse_remap, const unsigned int* attribute_remap, float vertex_scale, const float* vertex_offset, const unsigned char* vertex_kind, const unsigned char* vertex_update, const unsigned char* vertex_lock)
 {
 	size_t vertex_positions_stride_float = vertex_positions_stride / sizeof(float);
 	size_t vertex_attributes_stride_float = vertex_attributes_stride / sizeof(float);
@@ -573,12 +632,20 @@ static void finalizeVertices(float* vertex_positions_data, size_t vertex_positio
 
 		unsigned int ri = sparse_remap ? sparse_remap[i] : unsigned(i);
 
-		const Vector3& p = vertex_positions[i];
-		float* v = vertex_positions_data + ri * vertex_positions_stride_float;
+		// updating externally locked vertices is not allowed
+		if (vertex_lock && (vertex_lock[ri] & meshopt_SimplifyVertex_Lock) != 0)
+			continue;
 
-		v[0] = p.x * vertex_scale + vertex_offset[0];
-		v[1] = p.y * vertex_scale + vertex_offset[1];
-		v[2] = p.z * vertex_scale + vertex_offset[2];
+		// moving locked vertices may result in floating point drift
+		if (vertex_kind[i] != Kind_Locked)
+		{
+			const Vector3& p = vertex_positions[i];
+			float* v = vertex_positions_data + ri * vertex_positions_stride_float;
+
+			v[0] = p.x * vertex_scale + vertex_offset[0];
+			v[1] = p.y * vertex_scale + vertex_offset[1];
+			v[2] = p.z * vertex_scale + vertex_offset[2];
+		}
 
 		if (attribute_count)
 		{
@@ -1204,6 +1271,20 @@ static float getNeighborhoodRadius(const EdgeAdjacency& adjacency, const Vector3
 	return sqrtf(result);
 }
 
+static unsigned int getComplexTarget(unsigned int v, unsigned int target, const unsigned int* remap, const unsigned int* loop, const unsigned int* loopback)
+{
+	unsigned int r = remap[target];
+
+	// use loop metadata to guide complex collapses towards the correct wedge
+	// this works for edges on attribute discontinuities because loop/loopback track the single half-edge without a pair, similar to seams
+	if (loop[v] != ~0u && remap[loop[v]] == r)
+		return loop[v];
+	else if (loopback[v] != ~0u && remap[loopback[v]] == r)
+		return loopback[v];
+	else
+		return target;
+}
+
 static size_t boundEdgeCollapses(const EdgeAdjacency& adjacency, size_t vertex_count, size_t index_count, unsigned char* vertex_kind)
 {
 	size_t dual_count = 0;
@@ -1258,19 +1339,11 @@ static size_t pickEdgeCollapses(Collapse* collapses, size_t collapse_capacity, c
 
 			// two vertices are on a border or a seam, but there's no direct edge between them
 			// this indicates that they belong to two different edge loops and we should not collapse this edge
-			// loop[] tracks half edges so we only need to check i0->i1
-			if (k0 == k1 && (k0 == Kind_Border || k0 == Kind_Seam) && loop[i0] != i1)
+			// loop[] and loopback[] track half edges so we only need to check one of them
+			if ((k0 == Kind_Border || k0 == Kind_Seam) && k1 != Kind_Manifold && loop[i0] != i1)
 				continue;
-
-			if (k0 == Kind_Locked || k1 == Kind_Locked)
-			{
-				// the same check as above, but for border/seam -> locked collapses
-				// loop[] and loopback[] track half edges so we only need to check one of them
-				if ((k0 == Kind_Border || k0 == Kind_Seam) && loop[i0] != i1)
-					continue;
-				if ((k1 == Kind_Border || k1 == Kind_Seam) && loopback[i1] != i0)
-					continue;
-			}
+			if ((k1 == Kind_Border || k1 == Kind_Seam) && k0 != Kind_Manifold && loopback[i1] != i0)
+				continue;
 
 			// edge can be collapsed in either direction - we will pick the one with minimum error
 			// note: we evaluate error later during collapse ranking, here we just tag the edge as bidirectional
@@ -1316,7 +1389,7 @@ static void rankEdgeCollapses(Collapse* collapses, size_t collapse_count, const 
 			ei += quadricError(attribute_quadrics[i0], &attribute_gradients[i0 * attribute_count], attribute_count, vertex_positions[i1], &vertex_attributes[i1 * attribute_count]);
 			ej += bidi ? quadricError(attribute_quadrics[i1], &attribute_gradients[i1 * attribute_count], attribute_count, vertex_positions[i0], &vertex_attributes[i0 * attribute_count]) : 0;
 
-			// note: seam edges need to aggregate attribute errors between primary and secondary edges, as attribute quadrics are separate
+			// seam edges need to aggregate attribute errors between primary and secondary edges, as attribute quadrics are separate
 			if (vertex_kind[i0] == Kind_Seam)
 			{
 				// for seam collapses we need to find the seam pair; this is a bit tricky since we need to rely on edge loops as target vertex may be locked (and thus have more than two wedges)
@@ -1331,6 +1404,25 @@ static void rankEdgeCollapses(Collapse* collapses, size_t collapse_count, const 
 
 				ei += quadricError(attribute_quadrics[s0], &attribute_gradients[s0 * attribute_count], attribute_count, vertex_positions[s1], &vertex_attributes[s1 * attribute_count]);
 				ej += bidi ? quadricError(attribute_quadrics[s1], &attribute_gradients[s1 * attribute_count], attribute_count, vertex_positions[s0], &vertex_attributes[s0 * attribute_count]) : 0;
+			}
+			else
+			{
+				// complex edges can have multiple wedges, so we need to aggregate errors for all wedges based on the selected target
+				if (vertex_kind[i0] == Kind_Complex)
+					for (unsigned int v = wedge[i0]; v != i0; v = wedge[v])
+					{
+						unsigned int t = getComplexTarget(v, i1, remap, loop, loopback);
+
+						ei += quadricError(attribute_quadrics[v], &attribute_gradients[v * attribute_count], attribute_count, vertex_positions[t], &vertex_attributes[t * attribute_count]);
+					}
+
+				if (vertex_kind[i1] == Kind_Complex && bidi)
+					for (unsigned int v = wedge[i1]; v != i1; v = wedge[v])
+					{
+						unsigned int t = getComplexTarget(v, i0, remap, loop, loopback);
+
+						ej += quadricError(attribute_quadrics[v], &attribute_gradients[v * attribute_count], attribute_count, vertex_positions[t], &vertex_attributes[t * attribute_count]);
+					}
 			}
 		}
 
@@ -1482,7 +1574,9 @@ static size_t performEdgeCollapses(unsigned int* collapse_remap, unsigned char* 
 
 			do
 			{
-				collapse_remap[v] = i1;
+				unsigned int t = getComplexTarget(v, i1, remap, loop, loopback);
+
+				collapse_remap[v] = t;
 				v = wedge[v];
 			} while (v != i0);
 		}
@@ -1574,10 +1668,10 @@ static void updateQuadrics(const unsigned int* collapse_remap, size_t vertex_cou
 	}
 }
 
-static void solveQuadrics(Vector3* vertex_positions, float* vertex_attributes, size_t vertex_count, const Quadric* vertex_quadrics, const QuadricGrad* volume_gradients, const Quadric* attribute_quadrics, const QuadricGrad* attribute_gradients, size_t attribute_count, const unsigned int* remap, const unsigned int* wedge, const EdgeAdjacency& adjacency, const unsigned char* vertex_kind, const unsigned char* vertex_update)
+static void solvePositions(Vector3* vertex_positions, size_t vertex_count, const Quadric* vertex_quadrics, const QuadricGrad* volume_gradients, const Quadric* attribute_quadrics, const QuadricGrad* attribute_gradients, size_t attribute_count, const unsigned int* remap, const unsigned int* wedge, const EdgeAdjacency& adjacency, const unsigned char* vertex_kind, const unsigned char* vertex_update)
 {
 #if TRACE
-	size_t stats[5] = {};
+	size_t stats[6] = {};
 #endif
 
 	for (size_t i = 0; i < vertex_count; ++i)
@@ -1585,7 +1679,6 @@ static void solveQuadrics(Vector3* vertex_positions, float* vertex_attributes, s
 		if (!vertex_update[i])
 			continue;
 
-		// moving externally locked vertices is prohibited
 		// moving vertices on an attribute discontinuity may result in extrapolating UV outside of the chart bounds
 		// moving vertices on a border requires a stronger edge quadric to preserve the border geometry
 		if (vertex_kind[i] == Kind_Locked || vertex_kind[i] == Kind_Seam || vertex_kind[i] == Kind_Border)
@@ -1649,41 +1742,69 @@ static void solveQuadrics(Vector3* vertex_positions, float* vertex_attributes, s
 			continue;
 		}
 
+		// reject updates that increase positional error too much; allow some tolerance to improve attribute quality
+		if (quadricError(vertex_quadrics[i], p) > quadricError(vertex_quadrics[i], vp) * 1.5f + 1e-6f)
+		{
+			TRACESTATS(5);
+			continue;
+		}
+
 		TRACESTATS(1);
 		vertex_positions[i] = p;
 	}
 
 #if TRACE
-	printf("updated %d/%d positions; failed solve %d bounds %d flip %d\n", int(stats[1]), int(stats[0]), int(stats[2]), int(stats[3]), int(stats[4]));
+	printf("updated %d/%d positions; failed solve %d bounds %d flip %d error %d\n", int(stats[1]), int(stats[0]), int(stats[2]), int(stats[3]), int(stats[4]), int(stats[5]));
 #endif
+}
 
-	if (attribute_count == 0)
-		return;
-
+static void solveAttributes(Vector3* vertex_positions, float* vertex_attributes, size_t vertex_count, const Quadric* attribute_quadrics, const QuadricGrad* attribute_gradients, size_t attribute_count, const unsigned int* remap, const unsigned int* wedge, const unsigned char* vertex_kind, const unsigned char* vertex_update)
+{
 	for (size_t i = 0; i < vertex_count; ++i)
 	{
 		if (!vertex_update[i])
 			continue;
 
-		// updating externally locked vertices is prohibited
-		if (vertex_kind[i] == Kind_Locked)
+		if (remap[i] != i)
 			continue;
-
-		const Vector3& p = vertex_positions[remap[i]];
-		const Quadric& A = attribute_quadrics[i];
-
-		float iw = A.w == 0 ? 0.f : 1.f / A.w;
 
 		for (size_t k = 0; k < attribute_count; ++k)
 		{
-			const QuadricGrad& G = attribute_gradients[i * attribute_count + k];
+			unsigned int shared = ~0u;
 
-			vertex_attributes[i * attribute_count + k] = (G.gx * p.x + G.gy * p.y + G.gz * p.z + G.gw) * iw;
+			// for complex vertices, preserve attribute continuity and use highest weight wedge if values were shared
+			if (vertex_kind[i] == Kind_Complex)
+			{
+				shared = unsigned(i);
+
+				for (unsigned int v = wedge[i]; v != i; v = wedge[v])
+					if (vertex_attributes[v * attribute_count + k] != vertex_attributes[i * attribute_count + k])
+						shared = ~0u;
+					else if (shared != ~0u && attribute_quadrics[v].w > attribute_quadrics[shared].w)
+						shared = v;
+			}
+
+			// update attributes for all wedges
+			unsigned int v = unsigned(i);
+			do
+			{
+				unsigned int r = (shared == ~0u) ? v : shared;
+
+				const Vector3& p = vertex_positions[i]; // same for all wedges
+				const Quadric& A = attribute_quadrics[r];
+				const QuadricGrad& G = attribute_gradients[r * attribute_count + k];
+
+				float iw = A.w == 0 ? 0.f : 1.f / A.w;
+				float av = (G.gx * p.x + G.gy * p.y + G.gz * p.z + G.gw) * iw;
+
+				vertex_attributes[v * attribute_count + k] = av;
+				v = wedge[v];
+			} while (v != i);
 		}
 	}
 }
 
-static size_t remapIndexBuffer(unsigned int* indices, size_t index_count, const unsigned int* collapse_remap)
+static size_t remapIndexBuffer(unsigned int* indices, size_t index_count, const unsigned int* collapse_remap, const unsigned int* remap)
 {
 	size_t write = 0;
 
@@ -1698,7 +1819,14 @@ static size_t remapIndexBuffer(unsigned int* indices, size_t index_count, const 
 		assert(collapse_remap[v1] == v1);
 		assert(collapse_remap[v2] == v2);
 
-		if (v0 != v1 && v0 != v2 && v1 != v2)
+		// collapse zero area triangles even if they are not topologically degenerate
+		// this is required to cleanup manifold->seam collapses when a vertex is collapsed onto a seam pair
+		// as well as complex collapses and some other cases where cross wedge collapses are performed
+		unsigned int r0 = remap[v0];
+		unsigned int r1 = remap[v1];
+		unsigned int r2 = remap[v2];
+
+		if (r0 != r1 && r0 != r2 && r1 != r2)
 		{
 			indices[write + 0] = v0;
 			indices[write + 1] = v1;
@@ -1729,37 +1857,6 @@ static void remapEdgeLoops(unsigned int* loop, size_t vertex_count, const unsign
 				loop[i] = r;
 		}
 	}
-}
-
-static size_t filterIndexBuffer(unsigned int* indices, size_t index_count, const unsigned int* remap)
-{
-	size_t write = 0;
-
-	for (size_t i = 0; i < index_count; i += 3)
-	{
-		unsigned int v0 = indices[i + 0];
-		unsigned int v1 = indices[i + 1];
-		unsigned int v2 = indices[i + 2];
-
-		unsigned int r0 = remap[v0];
-		unsigned int r1 = remap[v1];
-		unsigned int r2 = remap[v2];
-
-		if (r0 != r1 && r0 != r2 && r1 != r2)
-		{
-			indices[write + 0] = v0;
-			indices[write + 1] = v1;
-			indices[write + 2] = v2;
-			write += 3;
-		}
-	}
-
-#if TRACE
-	if (index_count != write)
-		printf("removed %d degenerate triangles\n", int((index_count - write) / 3));
-#endif
-
-	return write;
 }
 
 static unsigned int follow(unsigned int* parents, unsigned int index)
@@ -1996,7 +2093,7 @@ static void computeVertexIds(unsigned int* vertex_ids, const Vector3* vertex_pos
 		int yi = int(v.y * cell_scale + 0.5f);
 		int zi = int(v.z * cell_scale + 0.5f);
 
-		if (vertex_lock && vertex_lock[i])
+		if (vertex_lock && (vertex_lock[i] & meshopt_SimplifyVertex_Lock))
 			vertex_ids[i] = (1 << 30) | unsigned(i);
 		else
 			vertex_ids[i] = (xi << 20) | (yi << 10) | zi;
@@ -2228,7 +2325,7 @@ static float interpolate(float y, float x0, float y0, float x1, float y1, float 
 	// three point interpolation from "revenge of interpolation search" paper
 	float num = (y1 - y) * (x1 - x2) * (x1 - x0) * (y2 - y0);
 	float den = (y2 - y) * (x1 - x2) * (y0 - y1) + (y0 - y) * (x1 - x0) * (y1 - y2);
-	return x1 + num / den;
+	return x1 + (den == 0.f ? 0.f : num / den);
 }
 
 } // namespace meshopt
@@ -2249,7 +2346,7 @@ size_t meshopt_simplifyEdge(unsigned int* destination, const unsigned int* indic
 	assert(vertex_positions_stride % sizeof(float) == 0);
 	assert(target_index_count <= index_count);
 	assert(target_error >= 0);
-	assert((options & ~(meshopt_SimplifyLockBorder | meshopt_SimplifySparse | meshopt_SimplifyErrorAbsolute | meshopt_SimplifyPrune | meshopt_SimplifyRegularize | meshopt_SimplifyInternalSolve | meshopt_SimplifyInternalDebug)) == 0);
+	assert((options & ~(meshopt_SimplifyLockBorder | meshopt_SimplifySparse | meshopt_SimplifyErrorAbsolute | meshopt_SimplifyPrune | meshopt_SimplifyRegularize | meshopt_SimplifyPermissive | meshopt_SimplifyInternalSolve | meshopt_SimplifyInternalDebug)) == 0);
 	assert(vertex_attributes_stride >= attribute_count * sizeof(float) && vertex_attributes_stride <= 256);
 	assert(vertex_attributes_stride % sizeof(float) == 0);
 	assert(attribute_count <= kMaxAttributes);
@@ -2428,18 +2525,17 @@ size_t meshopt_simplifyEdge(unsigned int* destination, const unsigned int* indic
 		// updateQuadrics will update vertex error if we use attributes, but if we don't then result_error and vertex_error are equivalent
 		vertex_error = attribute_count == 0 ? result_error : vertex_error;
 
+		// note: we update loops following edge collapses, but after this we might still have stale loop data
+		// this can happen when a triangle with a loop edge gets collapsed along a non-loop edge
+		// that works since a loop that points to a vertex that is no longer connected is not affecting collapse logic
 		remapEdgeLoops(loop, vertex_count, collapse_remap);
 		remapEdgeLoops(loopback, vertex_count, collapse_remap);
 
-		result_count = remapIndexBuffer(result, result_count, collapse_remap);
+		result_count = remapIndexBuffer(result, result_count, collapse_remap, remap);
 
 		if ((options & meshopt_SimplifyPrune) && result_count > target_index_count && component_nexterror <= vertex_error)
 			result_count = pruneComponents(result, result_count, components, component_errors, component_count, vertex_error, component_nexterror);
 	}
-
-	// when a vertex is collapsed onto a seam pair, if it was connected to both vertices, that will create a zero area triangle
-	// which is not topologically degenerate; filter out triangles like this as a post-process (this breaks loop metadata so it must be done last)
-	result_count = filterIndexBuffer(result, result_count, remap);
 
 	// at this point, component_nexterror might be stale: component it references may have been removed through a series of edge collapses
 	bool component_nextstale = true;
@@ -2484,16 +2580,19 @@ size_t meshopt_simplifyEdge(unsigned int* destination, const unsigned int* indic
 		{
 			unsigned int v = result[i];
 
-			// recomputing externally locked vertices may result in floating point drift
-			vertex_update[v] = vertex_kind[v] != Kind_Locked;
+			// mark the vertex for finalizeVertices and root vertex for solve*
+			vertex_update[remap[v]] = vertex_update[v] = 1;
 		}
 
 		// edge adjacency may be stale as we haven't updated it after last series of edge collapses
 		updateEdgeAdjacency(adjacency, result, result_count, vertex_count, remap);
 
-		solveQuadrics(vertex_positions, vertex_attributes, vertex_count, vertex_quadrics, volume_gradients, attribute_quadrics, attribute_gradients, attribute_count, remap, wedge, adjacency, vertex_kind, vertex_update);
+		solvePositions(vertex_positions, vertex_count, vertex_quadrics, volume_gradients, attribute_quadrics, attribute_gradients, attribute_count, remap, wedge, adjacency, vertex_kind, vertex_update);
 
-		finalizeVertices(const_cast<float*>(vertex_positions_data), vertex_positions_stride, const_cast<float*>(vertex_attributes_data), vertex_attributes_stride, attribute_weights, attribute_count, vertex_count, vertex_positions, vertex_attributes, sparse_remap, attribute_remap, vertex_scale, vertex_offset, vertex_update);
+		if (attribute_count)
+			solveAttributes(vertex_positions, vertex_attributes, vertex_count, attribute_quadrics, attribute_gradients, attribute_count, remap, wedge, vertex_kind, vertex_update);
+
+		finalizeVertices(const_cast<float*>(vertex_positions_data), vertex_positions_stride, const_cast<float*>(vertex_attributes_data), vertex_attributes_stride, attribute_weights, attribute_count, vertex_count, vertex_positions, vertex_attributes, sparse_remap, attribute_remap, vertex_scale, vertex_offset, vertex_kind, vertex_update, vertex_lock);
 	}
 
 	// if debug visualization data is requested, fill it instead of index data; for simplicity, this doesn't work with sparsity
@@ -2570,7 +2669,7 @@ size_t meshopt_simplifySloppy(unsigned int* destination, const unsigned int* ind
 	const int kInterpolationPasses = 5;
 
 	// invariant: # of triangles in min_grid <= target_count
-	int min_grid = int(1.f / (target_error < 1e-3f ? 1e-3f : target_error));
+	int min_grid = int(1.f / (target_error < 1e-3f ? 1e-3f : (target_error < 1.f ? target_error : 1.f)));
 	int max_grid = 1025;
 	size_t min_triangles = 0;
 	size_t max_triangles = index_count / 3;
