@@ -119,6 +119,7 @@ jobs:
     - name: Package Linux and Android
       run: |
         mkdir -p bin/linux-x64
+        mkdir -p bin/linux-arm64
         mkdir -p bin/android-arm64
         mkdir -p bin/android-arm
         mkdir -p bin/android-x64
