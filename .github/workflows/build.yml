@@ -123,11 +123,11 @@ jobs:
         mkdir -p bin/android-arm64
         mkdir -p bin/android-arm
         mkdir -p bin/android-x64
-        mv linux-x64-sdk/lib/*.so bin/linux-x64
-        mv linux-arm64-sdk/lib/*.so bin/linux-arm64
-        mv android-arm64_v8a-sdk/lib/*.so bin/android-arm64
-        mv android-armeabi_v7a-sdk/lib/*.so bin/android-arm
-        mv android-x86_64-sdk/lib/*.so bin/android-x64
+        mv linux-x64-sdk/lib/*.* bin/linux-x64
+        mv linux-arm64-sdk/lib/*.* bin/linux-arm64
+        mv android-arm64_v8a-sdk/lib/*.* bin/android-arm64
+        mv android-armeabi_v7a-sdk/lib/*.* bin/android-arm
+        mv android-x86_64-sdk/lib/*.* bin/android-x64
     - uses: actions/upload-artifact@v4
       with:
         name: libs_linux
@@ -149,7 +149,7 @@ jobs:
     - name: Package macos
       run: |
         mkdir -p bin/osx
-        mv osx-universal-sdk/lib/*.dylib bin/osx
+        mv osx-universal-sdk/lib/*.* bin/osx
     - uses: actions/upload-artifact@v4
       with:
         name: libs_osx
